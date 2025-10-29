@@ -1,0 +1,99 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+{{#each imports}}
+import { {{this}} } from '../dtos';
+{{/each}}
+
+@Injectable()
+export class {{controllerName}}Service {
+  private readonly logger = new Logger({{controllerName}}Service.name);
+
+{{#each operations}}
+  async {{operationId}}(
+    {{#each pathParams}}
+    {{name}}: {{type}},
+    {{/each}}
+    {{#if requestBody}}
+    {{#if pathParams}}, {{/if}}{{requestBody.name}}: {{requestBody.type}},
+    {{/if}}
+    {{#each queryParams}}
+    {{#if @first}}{{#if (or ../pathParams ../requestBody)}}, {{/if}}{{/if}}{{name}}?: {{type}},
+    {{/each}}
+  ){{#if returnType}}: Promise<{{returnType}}>{{/if}} {
+    this.logger.log(`Executing {{operationId}} with params: ${JSON.stringify({
+      {{#each pathParams}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
+      {{#if requestBody}}{{#if pathParams}}, {{/if}}{{requestBody.name}}{{/if}}
+      {{#each queryParams}}{{#if @first}}{{#if (or ../pathParams ../requestBody)}}, {{/if}}{{/if}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
+    })}`);
+
+    try {
+      // TODO: Implement business logic for {{operationId}}
+      {{#if (eq httpMethod 'Get')}}
+      {{#if pathParams}}
+      // Retrieve single resource by ID
+      const resource = await this.findById({{#each pathParams}}{{name}}{{/each}});
+      if (!resource) {
+        throw new NotFoundException(`Resource with ID {{#each pathParams}}${{{name}}}{{/each}} not found`);
+      }
+      return resource;
+      {{else}}
+      // Retrieve list of resources with optional filtering and pagination
+      return this.findAll({
+        {{#each queryParams}}
+        {{name}},
+        {{/each}}
+      });
+      {{/if}}
+      {{else if (eq httpMethod 'Post')}}
+      // Create new resource
+      return this.create({{requestBody.name}});
+      {{else if (eq httpMethod 'Put')}}
+      // Update existing resource
+      const existingResource = await this.findById({{#each pathParams}}{{name}}{{/each}});
+      if (!existingResource) {
+        throw new NotFoundException(`Resource with ID {{#each pathParams}}${{{name}}}{{/each}} not found`);
+      }
+      return this.update({{#each pathParams}}{{name}}{{/each}}, {{requestBody.name}});
+      {{else if (eq httpMethod 'Delete')}}
+      // Delete resource
+      const existingResource = await this.findById({{#each pathParams}}{{name}}{{/each}});
+      if (!existingResource) {
+        throw new NotFoundException(`Resource with ID {{#each pathParams}}${{{name}}}{{/each}} not found`);
+      }
+      await this.delete({{#each pathParams}}{{name}}{{/each}});
+      {{/if}}
+      
+      throw new Error('Method not implemented');
+    } catch (error) {
+      this.logger.error(`Error in {{operationId}}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+{{/each}}
+  // Helper methods - implement these based on your data layer
+  private async findById(id: string): Promise<any> {
+    // TODO: Implement database lookup
+    throw new Error('Method not implemented');
+  }
+
+  private async findAll(filters: any): Promise<any> {
+    // TODO: Implement database query with filters
+    throw new Error('Method not implemented');
+  }
+
+  private async create(data: any): Promise<any> {
+    // TODO: Implement database creation
+    throw new Error('Method not implemented');
+  }
+
+  private async update(id: string, data: any): Promise<any> {
+    // TODO: Implement database update
+    throw new Error('Method not implemented');
+  }
+
+  private async delete(id: string): Promise<void> {
+    // TODO: Implement database deletion
+    throw new Error('Method not implemented');
+  }
+}

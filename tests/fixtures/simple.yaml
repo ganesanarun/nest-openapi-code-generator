@@ -1,0 +1,18 @@
+
+openapi: 3.1.0
+info:
+  title: Simple API
+  version: 1.0.0
+paths:
+  /simple:
+    get:
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    Simple:
+      type: object
+      properties:
+        value:
+          type: string

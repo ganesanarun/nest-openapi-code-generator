@@ -1,0 +1,557 @@
+openapi: 3.1.0
+info:
+  title: User Management API
+  description: A comprehensive test API for user management operations
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+paths:
+  /users:
+    get:
+      operationId: getUsers
+      summary: Get all users
+      description: Retrieve a paginated list of users
+      tags:
+        - users
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          description: Filter users by status
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      operationId: createUser
+      summary: Create a new user
+      description: Create a new user account
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: Conflict - user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}:
+    get:
+      operationId: getUserById
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      operationId: updateUser
+      summary: Update user
+      description: Update an existing user's information
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      description: Delete a user account
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}/profile:
+    patch:
+      operationId: updateUserProfile
+      summary: Update user profile
+      description: Partially update a user's profile information
+      tags:
+        - users
+        - profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+          maxLength: 255
+        firstName:
+          type: string
+          description: User's first name
+          example: "John"
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          description: User's last name
+          example: "Doe"
+          minLength: 1
+          maxLength: 50
+        age:
+          type: integer
+          description: User's age
+          minimum: 13
+          maximum: 120
+          example: 30
+        status:
+          type: string
+          enum: [active, inactive, pending]
+          description: Current status of the user account
+          example: "active"
+        role:
+          type: string
+          enum: [admin, user, moderator]
+          description: User's role in the system
+          example: "user"
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the user
+          example: ["premium", "beta-tester"]
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata for the user
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was created
+          example: "2023-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was last updated
+          example: "2023-01-15T10:30:00Z"
+
+    UserProfile:
+      type: object
+      properties:
+        bio:
+          type: string
+          description: User's biography
+          maxLength: 500
+          example: "Software developer passionate about clean code"
+        avatar:
+          type: string
+          format: uri
+          description: URL to user's avatar image
+          example: "https://example.com/avatars/user123.jpg"
+        website:
+          type: string
+          format: uri
+          description: User's personal website
+          example: "https://johndoe.dev"
+        location:
+          type: string
+          description: User's location
+          maxLength: 100
+          example: "San Francisco, CA"
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: User's phone number in E.164 format
+          example: "+1234567890"
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
+          description: User's preferred theme
+        language:
+          type: string
+          pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+          default: "en"
+          description: User's preferred language (ISO 639-1)
+          example: "en-US"
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+              default: true
+              description: Enable email notifications
+            push:
+              type: boolean
+              default: false
+              description: Enable push notifications
+            sms:
+              type: boolean
+              default: false
+              description: Enable SMS notifications
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          maxLength: 255
+          example: "john.doe@example.com"
+        firstName:
+          type: string
+          description: User's first name
+          minLength: 1
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          description: User's last name
+          minLength: 1
+          maxLength: 50
+          example: "Doe"
+        password:
+          type: string
+          description: User's password
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]'
+          example: "SecurePass123!"
+        age:
+          type: integer
+          minimum: 13
+          maximum: 120
+          example: 30
+        role:
+          type: string
+          enum: [user, moderator]
+          default: user
+          description: Initial role for the user
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "Doe"
+        age:
+          type: integer
+          minimum: 13
+          maximum: 120
+          example: 30
+        status:
+          type: string
+          enum: [active, inactive, pending]
+          example: "active"
+        role:
+          type: string
+          enum: [admin, user, moderator]
+          example: "user"
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        bio:
+          type: string
+          maxLength: 500
+        avatar:
+          type: string
+          format: uri
+        website:
+          type: string
+          format: uri
+        location:
+          type: string
+          maxLength: 100
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of items per page
+          example: 10
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 15
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "USER_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The requested user could not be found"
+        details:
+          type: string
+          description: Additional error details
+          example: "User with ID 123e4567-e89b-12d3-a456-426614174000 does not exist"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2023-01-15T10:30:00Z"
+
+    ValidationError:
+      type: object
+      required:
+        - code
+        - message
+        - errors
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Request validation failed"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field that failed validation
+                example: "email"
+              message:
+                type: string
+                description: Validation error message
+                example: "Invalid email format"
+              code:
+                type: string
+                description: Specific validation error code
+                example: "INVALID_FORMAT"

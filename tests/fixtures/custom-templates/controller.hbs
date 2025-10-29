@@ -1,0 +1,27 @@
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+{{#if dtoImports}}
+import { {{dtoImports}} } from '../dtos/{{resourceName}}.dto';
+{{/if}}
+
+@ApiTags('{{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}')
+@Controller('{{basePath}}')
+@Throttle
+export class {{className}}Controller {
+  constructor(private readonly userControllerService: UserControllerService) {}
+
+{{#each methods}}
+  @{{httpMethod}}({{#if path}}'{{path}}'{{/if}})
+  @ApiOperation({ summary: '{{summary}}' })
+  {{#each decorators}}
+  {{{this}}}
+  {{/each}}
+  async {{methodName}}({{#if hasParams}}{{#each parameters}}
+    {{{decorator}}} {{name}}: {{type}}{{#unless @last}},{{/unless}}{{/each}}{{#if bodyParam}}{{#if parameters}},{{/if}}
+    {{{bodyParam.decorator}}} body: {{bodyParam.type}}{{/if}}{{/if}}
+  ): Promise<{{returnType}}> {
+    return this.userControllerService.{{methodName}}({{#if hasParams}}{{#each parameters}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}{{#if bodyParam}}{{#if parameters}}, {{/if}}body{{/if}}{{/if}});
+  }
+
+{{/each}}
+}

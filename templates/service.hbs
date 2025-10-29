@@ -1,0 +1,23 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+{{#if dtoImports}}
+import { {{dtoImports}} } from './{{resourceName}}.dto';
+{{/if}}
+
+@Injectable()
+export class {{className}}Service {
+  private readonly logger = new Logger({{className}}Service.name);
+
+{{#each methods}}
+  async {{methodName}}({{#if hasParams}}{{#each parameters}}
+    {{name}}: {{type}}{{#unless @last}},{{/unless}}{{/each}}{{#if bodyParam}}{{#if parameters}},{{/if}}
+    body: {{bodyParam.type}}{{/if}}{{/if}}
+  ): Promise<{{returnType}}> {
+    this.logger.log('Executing {{methodName}}');
+    
+    // TODO: Implement business logic
+    throw new Error('Method not implemented');
+  }
+
+{{/each}}
+}

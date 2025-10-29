@@ -1,0 +1,573 @@
+openapi: 3.1.0
+info:
+  title: User Management API
+  description: Advanced user management API with custom features
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:3000/api/v2
+    description: Development server
+
+paths:
+  /users:
+    get:
+      operationId: getUsers
+      summary: Get all users
+      description: Retrieve a paginated list of users with advanced filtering
+      tags:
+        - users
+      x-controller-name: UserManagement
+      x-generate-service: true
+      x-auth-required: true
+      x-rate-limit: "100/hour"
+      parameters:
+        - $ref: '../common/pagination.yaml#/components/parameters/PageParameter'
+        - $ref: '../common/pagination.yaml#/components/parameters/LimitParameter'
+        - $ref: '../common/pagination.yaml#/components/parameters/SortParameter'
+        - $ref: '../common/pagination.yaml#/components/parameters/SearchParameter'
+        - name: status
+          in: query
+          description: Filter users by status
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [active, inactive, pending, suspended]
+        - name: role
+          in: query
+          description: Filter users by role
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [admin, user, moderator, guest]
+        - name: createdAfter
+          in: query
+          description: Filter users created after this date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: createdBefore
+          in: query
+          description: Filter users created before this date
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../common/pagination.yaml#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ForbiddenError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/Error'
+
+    post:
+      operationId: createUser
+      summary: Create a new user
+      description: Create a new user account with advanced validation
+      tags:
+        - users
+      x-controller-name: UserManagement
+      x-generate-service: true
+      x-auth-required: true
+      x-validation-rules: "strict"
+      x-custom-decorator: "@AuditLog('USER_CREATED')"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ForbiddenError'
+        '409':
+          description: Conflict - user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/Error'
+
+  /users/{userId}:
+    get:
+      operationId: getUserById
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID with detailed information
+      tags:
+        - users
+      x-controller-name: UserManagement
+      x-generate-service: true
+      x-auth-required: true
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+        - name: includeProfile
+          in: query
+          description: Include user profile information
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: includePreferences
+          in: query
+          description: Include user preferences
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailed'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ForbiddenError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/Error'
+
+    put:
+      operationId: updateUser
+      summary: Update user
+      description: Update an existing user's information with audit logging
+      tags:
+        - users
+      x-controller-name: UserManagement
+      x-generate-service: true
+      x-auth-required: true
+      x-custom-decorator: "@AuditLog('USER_UPDATED')"
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ForbiddenError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/Error'
+
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      description: Soft delete a user account with audit logging
+      tags:
+        - users
+      x-controller-name: UserManagement
+      x-generate-service: true
+      x-auth-required: true
+      x-custom-decorator: "@AuditLog('USER_DELETED')"
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+        - name: permanent
+          in: query
+          description: Permanently delete the user (admin only)
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '204':
+          description: User deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/ForbiddenError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '../common/errors.yaml#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - status
+        - role
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+          maxLength: 255
+        firstName:
+          type: string
+          description: User's first name
+          example: "John"
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          description: User's last name
+          example: "Doe"
+          minLength: 1
+          maxLength: 50
+        status:
+          type: string
+          enum: [active, inactive, pending, suspended]
+          description: Current status of the user account
+          example: "active"
+        role:
+          type: string
+          enum: [admin, user, moderator, guest]
+          description: User's role in the system
+          example: "user"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was created
+          example: "2023-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was last updated
+          example: "2023-01-15T10:30:00Z"
+        lastLoginAt:
+          type: string
+          format: date-time
+          description: Timestamp of last login
+          example: "2023-01-15T10:30:00Z"
+
+    UserDetailed:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            profile:
+              $ref: '#/components/schemas/UserProfile'
+            preferences:
+              $ref: '#/components/schemas/UserPreferences'
+            statistics:
+              $ref: '#/components/schemas/UserStatistics'
+
+    UserProfile:
+      type: object
+      properties:
+        bio:
+          type: string
+          description: User's biography
+          maxLength: 1000
+          example: "Software developer passionate about clean code and architecture"
+        avatar:
+          type: string
+          format: uri
+          description: URL to user's avatar image
+          example: "https://example.com/avatars/user123.jpg"
+        website:
+          type: string
+          format: uri
+          description: User's personal website
+          example: "https://johndoe.dev"
+        location:
+          type: string
+          description: User's location
+          maxLength: 100
+          example: "San Francisco, CA"
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: User's phone number in E.164 format
+          example: "+1234567890"
+        dateOfBirth:
+          type: string
+          format: date
+          description: User's date of birth
+          example: "1990-01-15"
+        socialLinks:
+          type: object
+          properties:
+            twitter:
+              type: string
+              format: uri
+            linkedin:
+              type: string
+              format: uri
+            github:
+              type: string
+              format: uri
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
+          description: User's preferred theme
+        language:
+          type: string
+          pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+          default: "en"
+          description: User's preferred language (ISO 639-1)
+          example: "en-US"
+        timezone:
+          type: string
+          description: User's timezone
+          example: "America/New_York"
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+              default: true
+              description: Enable email notifications
+            push:
+              type: boolean
+              default: false
+              description: Enable push notifications
+            sms:
+              type: boolean
+              default: false
+              description: Enable SMS notifications
+            marketing:
+              type: boolean
+              default: false
+              description: Enable marketing communications
+
+    UserStatistics:
+      type: object
+      properties:
+        loginCount:
+          type: integer
+          minimum: 0
+          description: Total number of logins
+          example: 42
+        lastActiveAt:
+          type: string
+          format: date-time
+          description: Last activity timestamp
+          example: "2023-01-15T10:30:00Z"
+        accountAge:
+          type: integer
+          minimum: 0
+          description: Account age in days
+          example: 365
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          maxLength: 255
+          example: "john.doe@example.com"
+        firstName:
+          type: string
+          description: User's first name
+          minLength: 1
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          description: User's last name
+          minLength: 1
+          maxLength: 50
+          example: "Doe"
+        password:
+          type: string
+          description: User's password
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]'
+          example: "SecurePass123!"
+        role:
+          type: string
+          enum: [user, moderator]
+          default: user
+          description: Initial role for the user
+        profile:
+          $ref: '#/components/schemas/CreateUserProfileRequest'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    CreateUserProfileRequest:
+      type: object
+      properties:
+        bio:
+          type: string
+          maxLength: 1000
+        website:
+          type: string
+          format: uri
+        location:
+          type: string
+          maxLength: 100
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+        dateOfBirth:
+          type: string
+          format: date
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "Doe"
+        status:
+          type: string
+          enum: [active, inactive, pending, suspended]
+          example: "active"
+        role:
+          type: string
+          enum: [admin, user, moderator, guest]
+          example: "user"
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'

@@ -1,0 +1,33 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { 
+  IsString, IsNumber, IsBoolean, IsArray, IsOptional, 
+  IsEmail, IsEnum, Min, Max, MinLength, MaxLength, Matches,
+  ValidateNested, IsInt
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+{{#each enums}}
+export enum {{name}} {
+{{#each values}}
+  {{key}} = '{{value}}'{{#unless @last}},{{/unless}}
+{{/each}}
+}
+
+{{/each}}
+{{#each schemas}}
+export class {{name}} {
+{{#each properties}}
+  {{#if description}}
+  /**
+   * {{description}}
+   */
+  {{/if}}
+  {{#each decorators}}
+  {{{this}}}
+  {{/each}}
+  {{name}}: {{type}};
+
+{{/each}}
+}
+
+{{/each}}
