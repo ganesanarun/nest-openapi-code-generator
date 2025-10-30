@@ -300,6 +300,7 @@ export default config;
 | `generateTypes` | `boolean` | Generate TypeScript types | `true` |
 | `templateDir` | `string` | Custom template directory | `undefined` |
 | `generatorOptions.useSingleRequestParameter` | `boolean` | Use single parameter for request body | `false` |
+| `generatorOptions.includeErrorTypesInReturnType` | `boolean` | Include error response types in method return types | `false` |
 | `vendorExtensions` | `object` | Custom vendor extension mappings | `{}` |
 
 ## Programmatic API
@@ -356,6 +357,212 @@ await watcher.start();
 
 // Stop watching
 watcher.stop();
+```
+
+## Naming Conventions & Code Generation Patterns
+
+### File Naming Conventions
+
+The generator follows specific naming conventions based on your OpenAPI specification file names:
+
+#### Spec File Names → Generated Class Names
+
+| Spec File | Generated Controller Class | Generated DTO File |
+|-----------|---------------------------|-------------------|
+| `user.openapi.yaml` | `UserControllerBase` | `user.dto.ts` |
+| `user.query.openapi.yaml` | `UserQueryControllerBase` | `user.query.dto.ts` |
+| `order-management.openapi.yaml` | `OrderManagementControllerBase` | `order-management.dto.ts` |
+| `api.v1.users.openapi.yaml` | `ApiV1UsersControllerBase` | `api.v1.users.dto.ts` |
+
+The generator automatically:
+- Splits file names on dots (`.`), hyphens (`-`), and underscores (`_`)
+- Capitalizes each part using PascalCase
+- Joins them together for the class name
+
+### Controller Generation Patterns
+
+#### Empty Controller Decorator with Full Paths
+
+Controllers are generated with an empty `@Controller()` decorator, and full paths are specified in HTTP method decorators:
+
+```typescript
+@Controller()  // Empty controller path
+export abstract class UserControllerBase {
+  
+  @Get('/users')  // Full path in HTTP method
+  @ApiOperation({ summary: 'Get all users' })
+  getUsers(): Promise<User[]> {
+    throw new NotImplementedException('getUsers not yet implemented');
+  }
+  
+  @Post('/users')  // Full path in HTTP method
+  @ApiOperation({ summary: 'Create user' })
+  createUser(@Body() body: CreateUserDto): Promise<User> {
+    throw new NotImplementedException('createUser not yet implemented');
+  }
+}
+```
+
+#### Parameter Ordering
+
+Method parameters are automatically ordered for TypeScript compliance:
+
+1. **Required parameters first**: Path parameters, required body parameters
+2. **Optional parameters last**: Optional query parameters, optional headers
+3. **Within each group**: Ordered by type priority (path → body → query → header)
+
+```typescript
+// Correct parameter ordering
+updateUser(
+  @Param('userId') userId: string,           // Required path parameter
+  @Body() body: UpdateUserDto,               // Required body parameter  
+  @Query('include') include?: string,        // Optional query parameter
+  @Headers('X-Trace-Id') traceId?: string   // Optional header parameter
+): Promise<User>
+```
+
+#### Union Return Types
+
+The generator automatically creates TypeScript union types for methods that can return multiple response types:
+
+##### Success Types Only (Default)
+
+By default, only success response types (2xx status codes) are included in the return type:
+
+```typescript
+// OpenAPI spec with multiple success responses:
+// 200: User
+// 201: UserCreated  
+// 400: ValidationError
+// 404: NotFoundError
+
+@Post('/users')
+createUser(@Body() body: CreateUserDto): Promise<User | UserCreated> {
+  // Only success types in return type
+  // Error types are still used for @ApiResponse decorators
+}
+```
+
+##### Including Error Types
+
+You can configure the generator to include error response types in the return type:
+
+```javascript
+// openapi.config.js
+module.exports = {
+  generatorOptions: {
+    includeErrorTypesInReturnType: true
+  }
+};
+```
+
+```typescript
+// With error types included:
+@Post('/users')
+createUser(@Body() body: CreateUserDto): Promise<User | UserCreated | ValidationError | NotFoundError> {
+  // All response types included in return type
+}
+```
+
+##### Configuration Examples
+
+**Success types only (default):**
+```javascript
+module.exports = {
+  generatorOptions: {
+    includeErrorTypesInReturnType: false // Default
+  }
+};
+```
+
+**Include all response types:**
+```javascript
+module.exports = {
+  generatorOptions: {
+    includeErrorTypesInReturnType: true
+  }
+};
+```
+
+**TypeScript configuration:**
+```typescript
+import { GeneratorConfig } from '@snow-tzu/nest-openapi-code-generator';
+
+const config: GeneratorConfig = {
+  generatorOptions: {
+    includeErrorTypesInReturnType: true
+  }
+};
+```
+
+##### Benefits of Union Return Types
+
+1. **Type Safety**: TypeScript will enforce that you handle all possible return types
+2. **Better IDE Support**: IntelliSense shows all possible response types
+3. **Runtime Safety**: Helps catch cases where different response types are returned
+4. **Documentation**: Makes the API contract explicit in the code
+
+```typescript
+// Example usage with union types
+async createUser(body: CreateUserDto): Promise<User | ValidationError> {
+  try {
+    const user = await this.userService.create(body);
+    return user; // Type: User
+  } catch (error) {
+    if (error instanceof ValidationException) {
+      return { 
+        code: 'VALIDATION_ERROR', 
+        message: error.message 
+      }; // Type: ValidationError
+    }
+    throw error;
+  }
+}
+```
+
+#### Abstract Base Classes
+
+All generated controllers are abstract base classes that you extend in your implementation:
+
+```typescript
+// Generated: user.controller.base.ts
+export abstract class UserControllerBase {
+  abstract getUsers(): Promise<User[]>;
+  abstract createUser(body: CreateUserDto): Promise<User>;
+}
+
+// Your implementation: user.controller.ts
+@Injectable()
+export class UserController extends UserControllerBase {
+  constructor(private userService: UserService) {
+    super();
+  }
+
+  async getUsers(): Promise<User[]> {
+    return this.userService.getUsers();
+  }
+
+  async createUser(body: CreateUserDto): Promise<User> {
+    return this.userService.createUser(body);
+  }
+}
+```
+
+### Directory Structure
+
+Generated files are organized by resource name:
+
+```
+src/generated/
+├── user/
+│   ├── user.controller.base.ts
+│   └── user.dto.ts
+├── user.query/
+│   ├── user.query.controller.base.ts
+│   └── user.query.dto.ts
+└── order-management/
+    ├── order-management.controller.base.ts
+    └── order-management.dto.ts
 ```
 
 ## Advanced Features

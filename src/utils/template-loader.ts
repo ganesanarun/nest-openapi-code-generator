@@ -38,8 +38,8 @@ export class TemplateLoader {
   }
 
   private async getDefaultTemplate(templateName: string): Promise<string> {
-    // Load from default templates directory
-    const defaultTemplatesDir = path.join(__dirname, '../../templates');
+    // Load from default templates directory (now in src/templates)
+    const defaultTemplatesDir = path.join(__dirname, '../templates');
     const templatePath = path.join(defaultTemplatesDir, `${templateName}.hbs`);
     
     if (await fs.pathExists(templatePath)) {

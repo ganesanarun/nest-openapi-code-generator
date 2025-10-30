@@ -51,4 +51,7 @@ temp/
 # Generated files
 generated/
 output/
-.kiro/
+
+# Debug
+debug-*.js
+.kiro

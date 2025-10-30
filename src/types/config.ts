@@ -15,6 +15,7 @@ export interface GeneratorConfig {
   
   generatorOptions?: {
     useSingleRequestParameter?: boolean;
+    includeErrorTypesInReturnType?: boolean;
     additionalProperties?: Record<string, any>;
   };
 }
@@ -26,4 +27,7 @@ export const defaultConfig: GeneratorConfig = {
   generateDtos: true,
   generateTypes: true,
   generateServices: false,
+  generatorOptions: {
+    includeErrorTypesInReturnType: false, // Default to only success types
+  },
 };

@@ -39,7 +39,7 @@ export class ServiceGenerator {
     const dtoImports = this.extractDtoImports(methods);
 
     return template({
-      className: this.capitalize(resourceName),
+      className: this.generateClassName(resourceName),
       resourceName: resourceName.toLowerCase(),
       methods: methods.map(m => ({
         ...m,
@@ -216,6 +216,14 @@ export class ServiceGenerator {
 
   private capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  private generateClassName(resourceName: string): string {
+    // Split by dots and hyphens, then capitalize each part
+    return resourceName
+      .split(/[.\-_]/)
+      .map(part => this.capitalize(part))
+      .join('');
   }
 
   private findOriginalSchemaRef(originalSpec: any, operationId: string, type: 'requestBody' | 'response', status?: string): string | undefined {

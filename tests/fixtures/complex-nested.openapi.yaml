@@ -1,0 +1,584 @@
+openapi: 3.1.0
+info:
+  title: Complex Nested Schema Test API
+  description: Test API for complex nested schema structures with references
+  version: 1.0.0
+
+paths:
+  /organizations:
+    post:
+      operationId: createOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+
+components:
+  schemas:
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+        - owner
+        - settings
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Organization unique identifier
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Organization name
+        owner:
+          $ref: '#/components/schemas/User'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: Organization members
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+          description: Organization departments
+        settings:
+          $ref: '#/components/schemas/OrganizationSettings'
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - profile
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    UserProfile:
+      type: object
+      required:
+        - firstName
+        - lastName
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        avatar:
+          type: string
+          format: uri
+        address:
+          $ref: '#/components/schemas/Address'
+        socialLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+
+    Address:
+      type: object
+      required:
+        - street
+        - city
+        - country
+      properties:
+        street:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postalCode:
+          type: string
+          pattern: '^[0-9]{5}(-[0-9]{4})?$'
+        country:
+          type: string
+          enum: [US, CA, UK, DE, FR, JP, AU]
+
+    SocialLink:
+      type: object
+      required:
+        - platform
+        - url
+      properties:
+        platform:
+          type: string
+          enum: [twitter, linkedin, github, facebook, instagram]
+        url:
+          type: string
+          format: uri
+        verified:
+          type: boolean
+          default: false
+
+    Permission:
+      type: object
+      required:
+        - resource
+        - actions
+      properties:
+        resource:
+          type: string
+          enum: [users, organizations, projects, billing]
+        actions:
+          type: array
+          items:
+            type: string
+            enum: [read, write, delete, admin]
+        conditions:
+          type: object
+          properties:
+            timeRestriction:
+              $ref: '#/components/schemas/TimeRestriction'
+            ipRestriction:
+              type: array
+              items:
+                type: string
+                pattern: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?$'
+
+    TimeRestriction:
+      type: object
+      properties:
+        startTime:
+          type: string
+          pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+        endTime:
+          type: string
+          pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+        timezone:
+          type: string
+          enum: [UTC, EST, PST, GMT, CET]
+        daysOfWeek:
+          type: array
+          items:
+            type: string
+            enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
+        language:
+          type: string
+          pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+          default: en
+        notifications:
+          $ref: '#/components/schemas/NotificationSettings'
+        privacy:
+          $ref: '#/components/schemas/PrivacySettings'
+
+    NotificationSettings:
+      type: object
+      properties:
+        email:
+          type: boolean
+          default: true
+        push:
+          type: boolean
+          default: false
+        sms:
+          type: boolean
+          default: false
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+
+    NotificationChannel:
+      type: object
+      required:
+        - type
+        - enabled
+      properties:
+        type:
+          type: string
+          enum: [email, push, sms, webhook]
+        enabled:
+          type: boolean
+        config:
+          type: object
+          properties:
+            endpoint:
+              type: string
+              format: uri
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+
+    PrivacySettings:
+      type: object
+      properties:
+        profileVisibility:
+          type: string
+          enum: [public, private, friends]
+          default: public
+        dataSharing:
+          type: boolean
+          default: false
+        analytics:
+          type: boolean
+          default: true
+
+    Department:
+      type: object
+      required:
+        - id
+        - name
+        - manager
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        manager:
+          $ref: '#/components/schemas/User'
+        employees:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        budget:
+          $ref: '#/components/schemas/Budget'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+
+    Budget:
+      type: object
+      required:
+        - amount
+        - currency
+        - period
+      properties:
+        amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          enum: [USD, EUR, GBP, JPY, CAD]
+        period:
+          type: string
+          enum: [monthly, quarterly, yearly]
+        allocated:
+          type: number
+          minimum: 0
+        remaining:
+          type: number
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - owner
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [planning, active, on_hold, completed, cancelled]
+        owner:
+          $ref: '#/components/schemas/User'
+        team:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
+        tags:
+          type: array
+          items:
+            type: string
+
+    Milestone:
+      type: object
+      required:
+        - id
+        - title
+        - dueDate
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 500
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, in_progress, completed, overdue]
+        assignee:
+          $ref: '#/components/schemas/User'
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
+
+    OrganizationSettings:
+      type: object
+      required:
+        - security
+        - billing
+      properties:
+        security:
+          $ref: '#/components/schemas/SecuritySettings'
+        billing:
+          $ref: '#/components/schemas/BillingSettings'
+        integrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Integration'
+        customFields:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/CustomField'
+
+    SecuritySettings:
+      type: object
+      properties:
+        twoFactorRequired:
+          type: boolean
+          default: false
+        passwordPolicy:
+          $ref: '#/components/schemas/PasswordPolicy'
+        sessionTimeout:
+          type: integer
+          minimum: 300
+          maximum: 86400
+          default: 3600
+        allowedDomains:
+          type: array
+          items:
+            type: string
+            format: hostname
+
+    PasswordPolicy:
+      type: object
+      properties:
+        minLength:
+          type: integer
+          minimum: 8
+          maximum: 128
+          default: 8
+        requireUppercase:
+          type: boolean
+          default: true
+        requireLowercase:
+          type: boolean
+          default: true
+        requireNumbers:
+          type: boolean
+          default: true
+        requireSpecialChars:
+          type: boolean
+          default: true
+        maxAge:
+          type: integer
+          minimum: 30
+          maximum: 365
+          description: Password max age in days
+
+    BillingSettings:
+      type: object
+      required:
+        - plan
+        - paymentMethod
+      properties:
+        plan:
+          type: string
+          enum: [free, basic, premium, enterprise]
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        billingAddress:
+          $ref: '#/components/schemas/Address'
+        invoiceSettings:
+          $ref: '#/components/schemas/InvoiceSettings'
+
+    PaymentMethod:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [credit_card, bank_transfer, paypal]
+        details:
+          type: object
+          properties:
+            last4:
+              type: string
+              pattern: '^[0-9]{4}$'
+            expiryMonth:
+              type: integer
+              minimum: 1
+              maximum: 12
+            expiryYear:
+              type: integer
+              minimum: 2024
+              maximum: 2050
+
+    InvoiceSettings:
+      type: object
+      properties:
+        frequency:
+          type: string
+          enum: [monthly, quarterly, yearly]
+          default: monthly
+        autoPayment:
+          type: boolean
+          default: true
+        emailNotifications:
+          type: boolean
+          default: true
+
+    Integration:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - enabled
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [slack, teams, jira, github, gitlab]
+        enabled:
+          type: boolean
+        config:
+          type: object
+          properties:
+            apiKey:
+              type: string
+            webhookUrl:
+              type: string
+              format: uri
+            settings:
+              type: object
+              additionalProperties: true
+
+    CustomField:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          enum: [text, number, boolean, date, select]
+        required:
+          type: boolean
+          default: false
+        options:
+          type: array
+          items:
+            type: string
+          description: Options for select type fields
+        validation:
+          type: object
+          properties:
+            pattern:
+              type: string
+            minValue:
+              type: number
+            maxValue:
+              type: number
+
+    CreateOrganizationRequest:
+      type: object
+      required:
+        - name
+        - ownerEmail
+        - settings
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ownerEmail:
+          type: string
+          format: email
+        settings:
+          $ref: '#/components/schemas/OrganizationSettings'
+        initialMembers:
+          type: array
+          items:
+            type: object
+            required:
+              - email
+              - role
+            properties:
+              email:
+                type: string
+                format: email
+              role:
+                type: string
+                enum: [admin, member, viewer]
+              profile:
+                $ref: '#/components/schemas/UserProfile'

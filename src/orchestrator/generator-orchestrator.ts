@@ -20,7 +20,10 @@ export class GeneratorOrchestrator {
     this.logger = new Logger();
     this.specParser = new SpecParser();
     this.dtoGenerator = new DtoGenerator();
-    this.controllerGenerator = new ControllerGenerator(this.config.templateDir);
+    this.controllerGenerator = new ControllerGenerator(
+      this.config.templateDir,
+      this.config.generatorOptions?.includeErrorTypesInReturnType ?? false
+    );
     this.serviceGenerator = new ServiceGenerator(this.config.templateDir);
     this.fileWriter = new FileWriter(this.logger);
   }

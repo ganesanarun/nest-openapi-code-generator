@@ -89,7 +89,7 @@ describe('GeneratorOrchestrator', () => {
 
       // Check controller class
       expect(controllerContent).toContain('export abstract class UserControllerBase');
-      expect(controllerContent).toContain('@Controller(\'user\')');
+      expect(controllerContent).toContain('@Controller()');
       expect(controllerContent).toContain('@ApiTags(');
 
       // Check methods
@@ -101,11 +101,11 @@ describe('GeneratorOrchestrator', () => {
       expect(controllerContent).toContain('updateUserProfile(');
 
       // Check decorators
-      expect(controllerContent).toContain('@Get()');
-      expect(controllerContent).toContain('@Post()');
-      expect(controllerContent).toContain('@Put(');
-      expect(controllerContent).toContain('@Delete(');
-      expect(controllerContent).toContain('@Patch(');
+      expect(controllerContent).toContain('@Get(\'/users\')');
+      expect(controllerContent).toContain('@Post(\'/users\')');
+      expect(controllerContent).toContain('@Put(\'/users/{userId}\')');
+      expect(controllerContent).toContain('@Delete(\'/users/{userId}\')');
+      expect(controllerContent).toContain('@Patch(\'/users/{userId}/profile\')');
 
       // Check NotImplementedException
       expect(controllerContent).toContain('NotImplementedException');

@@ -112,9 +112,9 @@ describe('DtoGenerator', () => {
       const userSchema = testSpec.components?.schemas?.User as SchemaObject;
       const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
 
-      // Should reference other DTOs as objects (since our generator doesn't resolve refs yet)
-      expect(result).toContain('profile?: object');
-      expect(result).toContain('preferences?: object');
+      // Should reference proper DTO types now that we resolve refs
+      expect(result).toContain('profile?: UserProfileDto');
+      expect(result).toContain('preferences?: UserPreferencesDto');
     });
 
     it('should generate DTO for CreateUserRequest schema', async () => {
@@ -164,7 +164,7 @@ describe('DtoGenerator', () => {
       expect(result).toContain('export class UserPreferencesDto');
       
       // Should handle nested object properties
-      expect(result).toContain('notifications?: object');
+      expect(result).toContain('notifications?: UserPreferencesNotificationsDto');
       
       // Should handle pattern validation for language
       expect(result).toContain('@Matches(/^[a-z]{2}(-[A-Z]{2})?$/)');
@@ -259,6 +259,142 @@ describe('DtoGenerator', () => {
     });
   });
 
+  describe('complex nested schema handling', () => {
+    let complexSpec: OpenAPISpec;
+
+    beforeEach(async () => {
+      const complexSpecPath = path.join(__dirname, '../fixtures/complex-nested.openapi.yaml');
+      complexSpec = await specParser.parseSpec(complexSpecPath);
+    });
+
+    it('should handle deeply nested schema references', async () => {
+      const organizationSchema = complexSpec.components?.schemas?.Organization as SchemaObject;
+      const result = await dtoGenerator.generateDto('OrganizationDto', organizationSchema, complexSpec);
+
+      // Should properly reference nested DTOs
+      expect(result).toContain('owner: UserDto');
+      expect(result).toContain('members?: UserDto[]');
+      expect(result).toContain('departments?: DepartmentDto[]');
+      expect(result).toContain('settings: OrganizationSettingsDto');
+
+      // Should include proper validation decorators for references
+      expect(result).toContain('@ValidateNested()');
+      expect(result).toContain('@Type(() => UserDto)');
+      expect(result).toContain('@Type(() => OrganizationSettingsDto)');
+    });
+
+    it('should handle multiple levels of nesting', async () => {
+      const userSchema = complexSpec.components?.schemas?.User as SchemaObject;
+      const result = await dtoGenerator.generateDto('UserDto', userSchema, complexSpec);
+
+      // Should handle nested profile with address
+      expect(result).toContain('profile: UserProfileDto');
+      expect(result).toContain('permissions?: PermissionDto[]');
+      expect(result).toContain('preferences?: UserPreferencesDto');
+
+      // Should include proper decorators
+      expect(result).toContain('@ValidateNested()');
+      expect(result).toContain('@Type(() => UserProfileDto)');
+      expect(result).toContain('@Type(() => PermissionDto)');
+    });
+
+    it('should handle arrays of referenced objects', async () => {
+      const departmentSchema = complexSpec.components?.schemas?.Department as SchemaObject;
+      const result = await dtoGenerator.generateDto('DepartmentDto', departmentSchema, complexSpec);
+
+      // Should handle arrays of referenced objects
+      expect(result).toContain('employees?: UserDto[]');
+      expect(result).toContain('projects?: ProjectDto[]');
+
+      // Should include proper array validation decorators
+      expect(result).toContain('@IsArray()');
+      expect(result).toContain('@ValidateNested({ each: true })');
+      expect(result).toContain('@Type(() => UserDto)');
+      expect(result).toContain('@Type(() => ProjectDto)');
+    });
+
+    it('should handle optional vs required nested properties', async () => {
+      const userProfileSchema = complexSpec.components?.schemas?.UserProfile as SchemaObject;
+      const result = await dtoGenerator.generateDto('UserProfileDto', userProfileSchema, complexSpec);
+
+      // Required properties should not have ?
+      expect(result).toContain('firstName: string');
+      expect(result).toContain('lastName: string');
+
+      // Optional properties should have ?
+      expect(result).toContain('avatar?: string');
+      expect(result).toContain('address?: AddressDto');
+      expect(result).toContain('socialLinks?: SocialLinkDto[]');
+
+      // Optional properties should have @IsOptional()
+      expect(result).toContain('@IsOptional()');
+    });
+
+    it('should detect and handle circular references', async () => {
+      const milestoneSchema = complexSpec.components?.schemas?.Milestone as SchemaObject;
+      const result = await dtoGenerator.generateDto('MilestoneDto', milestoneSchema, complexSpec);
+
+      // Should handle self-referencing dependencies array by using 'any' to avoid circular reference
+      expect(result).toContain('dependencies?: any[]');
+      expect(result).toContain('@ValidateNested({ each: true })');
+      expect(result).toContain('@Type(() => Object)');
+    });
+
+    it('should generate all DTOs with proper types', async () => {
+      const schemas = complexSpec.components?.schemas || {};
+      const result = await dtoGenerator.generateAllDtos(schemas, complexSpec);
+
+      // Should contain all DTO class definitions
+      expect(result).toContain('export class OrganizationDto');
+      expect(result).toContain('export class UserDto');
+      expect(result).toContain('export class UserProfileDto');
+      expect(result).toContain('export class AddressDto');
+      expect(result).toContain('export class DepartmentDto');
+
+      // Should contain proper DTO type references
+      expect(result).toContain('owner: UserDto');
+      expect(result).toContain('profile: UserProfileDto');
+    });
+
+    it('should handle complex enum structures in nested schemas', async () => {
+      const addressSchema = complexSpec.components?.schemas?.Address as SchemaObject;
+      const result = await dtoGenerator.generateDto('AddressDto', addressSchema, complexSpec);
+
+      // Should generate enum for country
+      expect(result).toContain('export enum CountryEnum');
+      expect(result).toContain('US = \'US\'');
+      expect(result).toContain('CA = \'CA\'');
+      expect(result).toContain('@IsEnum(CountryEnum)');
+    });
+
+    it('should handle nested objects with additional properties', async () => {
+      const organizationSchema = complexSpec.components?.schemas?.Organization as SchemaObject;
+      const result = await dtoGenerator.generateDto('OrganizationDto', organizationSchema, complexSpec);
+
+      // Should handle metadata with additionalProperties
+      expect(result).toContain('metadata?: object');
+    });
+
+    it('should handle complex validation patterns in nested schemas', async () => {
+      const addressSchema = complexSpec.components?.schemas?.Address as SchemaObject;
+      const result = await dtoGenerator.generateDto('AddressDto', addressSchema, complexSpec);
+
+      // Should include pattern validation for postal code
+      expect(result).toContain('@Matches(/^[0-9]{5}(-[0-9]{4})?$/)');
+    });
+
+    it('should handle nested arrays with inline object schemas', async () => {
+      const createOrgSchema = complexSpec.components?.schemas?.CreateOrganizationRequest as SchemaObject;
+      const result = await dtoGenerator.generateDto('CreateOrganizationRequestDto', createOrgSchema, complexSpec);
+
+      // Should handle initialMembers array with inline object schema
+      expect(result).toContain('initialMembers?: CreateOrganizationRequestInitialMembersItemDto[]');
+      expect(result).toContain('@IsArray()');
+      expect(result).toContain('@ValidateNested({ each: true })');
+      expect(result).toContain('@Type(() => CreateOrganizationRequestInitialMembersItemDto)');
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle schema without properties', async () => {
       const emptySchema: SchemaObject = {
@@ -321,10 +457,10 @@ describe('DtoGenerator', () => {
 
       const result = await dtoGenerator.generateDto('ItemsListDto', testSchema, testSpec);
 
-      expect(result).toContain('items?: object[]');
+      expect(result).toContain('items?: ItemsListItemsItemDto[]');
       expect(result).toContain('@IsArray()');
       expect(result).toContain('@ValidateNested({ each: true })');
-      expect(result).toContain('@Type(() => Object)');
+      expect(result).toContain('@Type(() => ItemsListItemsItemDto)');
     });
 
     it('should handle nested objects with @Type(() => Object)', async () => {
@@ -343,9 +479,9 @@ describe('DtoGenerator', () => {
 
       const result = await dtoGenerator.generateDto('ConfigDto', testSchema, testSpec);
 
-      expect(result).toContain('config?: object');
+      expect(result).toContain('config?: ConfigConfigDto');
       expect(result).toContain('@ValidateNested()');
-      expect(result).toContain('@Type(() => Object)');
+      expect(result).toContain('@Type(() => ConfigConfigDto)');
     });
 
     it('should use capitalized types in @ApiProperty type parameter', async () => {

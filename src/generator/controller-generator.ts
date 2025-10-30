@@ -11,6 +11,7 @@ interface ControllerMethod {
   bodyParam?: BodyParameter;
   responses: MethodResponse[];
   decorators: string[];
+  allParameters?: MethodParameter[];
 }
 
 interface MethodParameter {
@@ -19,6 +20,9 @@ interface MethodParameter {
   decorator: string;
   validationType?: string;
   required?: boolean;
+  schema?: any;
+  description?: string;
+  parameterType?: string;
 }
 
 interface BodyParameter {
@@ -34,9 +38,11 @@ interface MethodResponse {
 
 export class ControllerGenerator {
   private templateLoader: TemplateLoader;
+  private includeErrorTypesInReturnType: boolean;
 
-  constructor(templateDir?: string) {
+  constructor(templateDir?: string, includeErrorTypesInReturnType: boolean = false) {
     this.templateLoader = new TemplateLoader(templateDir);
+    this.includeErrorTypesInReturnType = includeErrorTypesInReturnType;
   }
 
   async generateController(
@@ -51,14 +57,14 @@ export class ControllerGenerator {
     const dtoImports = this.extractDtoImports(methods);
 
     return template({
-      basePath: resourceName.toLowerCase(),
-      className: this.capitalize(resourceName) + 'Controller',
+      basePath: '', // Empty controller path
+      className: this.generateClassName(resourceName) + 'Controller',
       resourceName: resourceName.toLowerCase(),
       tags,
       methods: methods.map(m => ({
         ...m,
         returnType: this.getReturnType(m),
-        hasParams: m.parameters.length > 0 || !!m.bodyParam
+        hasParams: (m.allParameters && m.allParameters.length > 0) || m.parameters.length > 0 || !!m.bodyParam
       })),
       dtoImports: dtoImports.join(', ')
     });
@@ -70,8 +76,8 @@ export class ControllerGenerator {
     resourceName: string
   ): ControllerMethod[] {
     const methods: ControllerMethod[] = [];
-    // Use plural form for basePath matching
-    const basePath = `/${resourceName.toLowerCase()}s`;
+    // Extract base path dynamically from actual API paths
+    const basePath = this.extractBasePath(Object.keys(paths), resourceName);
 
     for (const [pathStr, pathItem] of Object.entries(paths)) {
       const httpMethods = ['get', 'post', 'put', 'patch', 'delete'];
@@ -94,6 +100,85 @@ export class ControllerGenerator {
     return methods;
   }
 
+  private extractBasePath(paths: string[], resourceName: string): string {
+    if (paths.length === 0) {
+      return '';
+    }
+
+    // If there's only one path, use it as the base
+    if (paths.length === 1) {
+      const singlePath = paths[0];
+      // Remove path parameters to get the base
+      const basePart = singlePath.replace(/\/\{[^}]+\}/g, '');
+      return basePart || '';
+    }
+
+    // Find the common prefix among all paths
+    const commonPrefix = this.findCommonPathPrefix(paths);
+    
+    // If we found a meaningful common prefix, use it
+    if (commonPrefix && commonPrefix !== '/') {
+      return commonPrefix;
+    }
+
+    // Fallback: try to find a path that matches the resource name pattern
+    const resourcePatterns = [
+      `/${resourceName.toLowerCase()}s`, // plural
+      `/${resourceName.toLowerCase()}`, // singular
+      `/api/${resourceName.toLowerCase()}s`, // with api prefix
+      `/api/${resourceName.toLowerCase()}`, // with api prefix singular
+    ];
+
+    for (const pattern of resourcePatterns) {
+      if (paths.some(path => path.startsWith(pattern))) {
+        return pattern;
+      }
+    }
+
+    // Last resort: return empty string (no base path)
+    return '';
+  }
+
+  private findCommonPathPrefix(paths: string[]): string {
+    if (paths.length === 0) return '';
+    if (paths.length === 1) {
+      // For single path, extract the base without parameters
+      return paths[0].replace(/\/\{[^}]+\}.*$/, '');
+    }
+
+    // Split all paths into segments
+    const pathSegments = paths.map(path => path.split('/').filter(Boolean));
+    
+    // Find the shortest path to limit our search
+    const minLength = Math.min(...pathSegments.map(segments => segments.length));
+    
+    let commonSegments: string[] = [];
+    
+    // Compare segments at each position
+    for (let i = 0; i < minLength; i++) {
+      const firstSegment = pathSegments[0][i];
+      
+      // Skip parameter segments in the comparison
+      if (firstSegment.startsWith('{') && firstSegment.endsWith('}')) {
+        break;
+      }
+      
+      // Check if all paths have the same segment at this position
+      const allMatch = pathSegments.every(segments => 
+        segments[i] === firstSegment && 
+        !segments[i].startsWith('{')
+      );
+      
+      if (allMatch) {
+        commonSegments.push(firstSegment);
+      } else {
+        break;
+      }
+    }
+    
+    return commonSegments.length > 0 ? '/' + commonSegments.join('/') : '';
+  }
+
   private processOperation(
     httpMethod: string,
     path: string,
@@ -102,47 +187,114 @@ export class ControllerGenerator {
     basePath: string
   ): ControllerMethod {
     const methodName = operation.operationId || this.generateMethodName(httpMethod, path);
-    const parameters = this.processParameters(operation.parameters || []);
+    const allParameters = this.processParameters(operation.parameters || []);
     const originalSpec = (spec as any)._originalSpec;
     const bodyParam = this.processRequestBody(operation.requestBody, operation.operationId, originalSpec);
-    const responses = this.processResponses(operation.responses, operation.operationId, originalSpec);
-    const decorators = this.buildDecorators(operation, parameters, responses);
-
-    let relativePath = '';
-    if (path.startsWith(basePath)) {
-      relativePath = path.substring(basePath.length);
-    } else {
-      // If path doesn't start with basePath, use the full path
-      relativePath = path;
+    
+    // Combine parameters and body param for proper sorting
+    const allMethodParams = [...allParameters];
+    if (bodyParam) {
+      // Convert body param to parameter format for sorting
+      const bodyAsParam: MethodParameter = {
+        name: 'body',
+        type: bodyParam.type,
+        decorator: bodyParam.decorator,
+        required: true, // Body is always required when present
+        parameterType: 'body'
+      };
+      allMethodParams.push(bodyAsParam);
     }
+    
+    // Sort all parameters including body
+    const sortedParams = this.sortParameters(allMethodParams);
+    
+    const responses = this.processResponses(operation.responses, operation.operationId, originalSpec);
+    const decorators = this.buildDecorators(operation, allParameters, responses);
+
+    // Use the full path for HTTP method decorators
+    const fullPath = path.startsWith('/') ? path : '/' + path;
 
     return {
       httpMethod: this.capitalize(httpMethod),
       methodName,
-      path: relativePath,
+      path: fullPath,
       summary: operation.summary,
       tags: operation.tags || [],
-      parameters,
+      parameters: allParameters, // Keep original for decorators
       bodyParam,
       responses,
-      decorators
+      decorators,
+      allParameters: sortedParams // Add sorted parameters for template
     };
   }
 
   private processParameters(parameters: any[]): MethodParameter[] {
     return parameters.map(param => {
-      const decoratorType = param.in === 'path' ? 'Param' : this.capitalize(param.in);
       const type = this.getParamType(param.schema);
       const isRequired = param.required === true || param.in === 'path';
-      const nameWithOptional = isRequired ? param.name : `${param.name}?`;
+      
+      let decoratorType: string;
+      let paramName: string;
+      let decorator: string;
+      
+      if (param.in === 'header') {
+        // For header parameters, use @Headers() and convert hyphenated names to camelCase
+        decoratorType = 'Headers';
+        paramName = this.toCamelCase(param.name);
+        decorator = `@${decoratorType}('${param.name}')`;
+      } else if (param.in === 'path') {
+        decoratorType = 'Param';
+        paramName = param.name;
+        decorator = `@${decoratorType}('${param.name}')`;
+      } else {
+        decoratorType = this.capitalize(param.in);
+        paramName = param.name;
+        decorator = `@${decoratorType}('${param.name}')`;
+      }
+      
+      const nameWithOptional = isRequired ? paramName : `${paramName}?`;
       
       return {
         name: nameWithOptional,
         type: type,
-        decorator: `@${decoratorType}('${param.name}')`,
+        decorator: decorator,
         validationType: type,
-        required: isRequired
+        required: isRequired,
+        schema: param.schema,
+        description: param.description,
+        parameterType: param.in // Add parameter type for sorting
       };
+    });
+  }
+
+  private sortParameters(parameters: MethodParameter[]): MethodParameter[] {
+    // Define parameter type priority: path > body > query > header > others
+    const getParameterTypePriority = (param: MethodParameter): number => {
+      const paramType = (param as any).parameterType;
+      switch (paramType) {
+        case 'path': return 1;
+        case 'body': return 2; // Body comes after path but before query/header
+        case 'query': return 3;
+        case 'header': return 4;
+        default: return 5;
+      }
+    };
+
+    return parameters.sort((a, b) => {
+      // First, sort by required status (required first)
+      if (a.required && !b.required) return -1;
+      if (!a.required && b.required) return 1;
+      
+      // Within the same required status, sort by parameter type
+      const aPriority = getParameterTypePriority(a);
+      const bPriority = getParameterTypePriority(b);
+      
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      
+      // Within the same type and required status, sort alphabetically by name
+      return a.name.localeCompare(b.name);
     });
   }
 
@@ -223,6 +375,34 @@ export class ControllerGenerator {
         decorators.push(`@ApiQuery({ name: '${cleanName}', type: ${typeClass}, required: ${isRequired} })`);
       });
 
+    parameters
+      .filter(p => p.decorator.includes('@Headers'))
+      .forEach(p => {
+        const cleanName = p.name.replace('?', '');
+        const isRequired = p.required === true;
+        // Extract the original header name from the decorator
+        const headerName = p.decorator.match(/@Headers\('([^']+)'\)/)?.[1] || cleanName;
+        
+        // Build schema object for ApiHeader
+        const schemaProps: string[] = [];
+        if (p.schema) {
+          if (p.schema.type) {
+            schemaProps.push(`type: '${p.schema.type}'`);
+          }
+          if (p.schema.pattern) {
+            schemaProps.push(`pattern: '${p.schema.pattern}'`);
+          }
+          if (p.schema.format) {
+            schemaProps.push(`format: '${p.schema.format}'`);
+          }
+        }
+        
+        const description = p.description || `${headerName} header parameter`;
+        const schemaStr = schemaProps.length > 0 ? `, schema: { ${schemaProps.join(', ')} }` : '';
+        
+        decorators.push(`@ApiHeader({ name: '${headerName}', description: '${description}', required: ${isRequired}${schemaStr} })`);
+      });
+
     responses.forEach(r => {
       const options = r.type !== 'void' && r.type !== 'any' && r.status !== 204
         ? `{ status: ${r.status}, type: ${r.type} }` 
@@ -278,8 +458,33 @@ export class ControllerGenerator {
   }
 
   private getReturnType(method: ControllerMethod): string {
-    const successResponse = method.responses.find(r => r.status >= 200 && r.status < 300);
-    return successResponse?.type || 'void';
+    // Filter responses based on configuration
+    const responses = this.includeErrorTypesInReturnType 
+      ? method.responses // Include all responses (success and error)
+      : method.responses.filter(r => r.status >= 200 && r.status < 300); // Only success responses (2xx)
+    
+    if (responses.length === 0) {
+      return 'void';
+    }
+    
+    // Extract unique types from filtered responses
+    const responseTypes = responses
+      .map(r => r.type)
+      .filter(type => type !== 'void' && type !== 'any') // Filter out void and any types
+      .filter((type, index, array) => array.indexOf(type) === index); // Remove duplicates
+    
+    if (responseTypes.length === 0) {
+      // If all responses are void or any, check if we have any non-void responses
+      const hasNonVoidResponses = responses.some(r => r.type !== 'void');
+      return hasNonVoidResponses ? 'any' : 'void';
+    }
+    
+    if (responseTypes.length === 1) {
+      return responseTypes[0];
+    }
+    
+    // Create union type for multiple response types
+    return responseTypes.join(' | ');
   }
 
   private generateMethodName(httpMethod: string, path: string): string {
@@ -299,19 +504,51 @@ export class ControllerGenerator {
     const dtos = new Set<string>();
     methods.forEach(m => {
       if (m.bodyParam) {
-        dtos.add(m.bodyParam.type);
+        // Extract base type from array types
+        const baseType = m.bodyParam.type.replace(/\[\]$/, '');
+        if (baseType !== 'void' && baseType !== 'any') {
+          dtos.add(baseType);
+        }
       }
       m.responses.forEach(r => {
         if (r.type !== 'void' && r.type !== 'any') {
-          dtos.add(r.type);
+          // Extract base type from array types
+          const baseType = r.type.replace(/\[\]$/, '');
+          if (baseType !== 'void' && baseType !== 'any') {
+            dtos.add(baseType);
+          }
         }
       });
     });
+    
+    // Also extract types from union return types
+    methods.forEach(m => {
+      const returnType = this.getReturnType(m);
+      if (returnType !== 'void' && returnType !== 'any') {
+        // Split union types and extract base types
+        const unionTypes = returnType.split(' | ');
+        unionTypes.forEach(type => {
+          const baseType = type.trim().replace(/\[\]$/, '');
+          if (baseType !== 'void' && baseType !== 'any') {
+            dtos.add(baseType);
+          }
+        });
+      }
+    });
+    
     return Array.from(dtos);
   }
 
   private capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  private generateClassName(resourceName: string): string {
+    // Split by dots and hyphens, then capitalize each part
+    return resourceName
+      .split(/[.\-_]/)
+      .map(part => this.capitalize(part))
+      .join('');
   }
 
   private getTypeClass(type: string): string {
@@ -325,6 +562,11 @@ export class ControllerGenerator {
       default:
         return type;
     }
+  }
+
+  private toCamelCase(str: string): string {
+    return str.replace(/-([a-zA-Z])/g, (match, letter) => letter.toUpperCase())
+              .replace(/^[A-Z]/, (match) => match.toLowerCase());
   }
 
 
