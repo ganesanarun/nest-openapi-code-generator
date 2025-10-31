@@ -1,6 +1,11 @@
 # @snow-tzu/nest-openapi-code-generator
 
-A contract-first OpenAPI code generator for NestJS applications that automatically generates controllers, DTOs, and type definitions from OpenAPI 3.1 specifications with built-in validation.
+[![npm version](https://img.shields.io/npm/v/@snow-tzu/nest-openapi-code-generator.svg)](https://www.npmjs.com/package/@snow-tzu/nest-openapi-code-generator) [![build](https://github.com/ganesanarun/nest-openapi-code-generator/actions/workflows/build.yml/badge.svg)](https://github.com/ganesanarun/nest-openapi-code-generator/actions/workflows/build.yml)
+
+![Open API Generator](docs/images/master.jpeg)
+
+A contract-first OpenAPI code generator for NestJS applications that automatically generates controllers, DTOs, and type
+definitions from OpenAPI 3.1 specifications with built-in validation.
 
 ## Features
 
@@ -15,16 +20,19 @@ A contract-first OpenAPI code generator for NestJS applications that automatical
 ## Installation
 
 ### npm
+
 ```bash
 npm install @snow-tzu/nest-openapi-code-generator
 ```
 
 ### yarn
+
 ```bash
 yarn add @snow-tzu/nest-openapi-code-generator
 ```
 
 ### pnpm
+
 ```bash
 pnpm add @snow-tzu/nest-openapi-code-generator
 ```
@@ -55,7 +63,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
-    
+
     post:
       operationId: createUser
       summary: Create a new user
@@ -97,7 +105,7 @@ components:
           type: string
           minLength: 1
           maxLength: 50
-    
+
     CreateUserRequest:
       type: object
       required:
@@ -121,17 +129,19 @@ components:
 ### 2. Generate Code
 
 #### Using CLI
+
 ```bash
 npx openapi-generate
 ```
 
 #### Using Node.js API
+
 ```typescript
-import { generateFromConfig } from '@snow-tzu/nest-openapi-code-generator';
+import {generateFromConfig} from '@snow-tzu/nest-openapi-code-generator';
 
 await generateFromConfig({
-  specsDir: './specs',
-  outputDir: './src/generated'
+    specsDir: './specs',
+    outputDir: './src/generated'
 });
 ```
 
@@ -140,79 +150,81 @@ await generateFromConfig({
 The generator will create:
 
 **Controllers** (`src/generated/controllers/user.controller.ts`):
+
 ```typescript
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { User, CreateUserRequest } from '../dtos';
+import {Controller, Get, Post, Body} from '@nestjs/common';
+import {ApiTags, ApiOperation, ApiResponse} from '@nestjs/swagger';
+import {User, CreateUserRequest} from '../dtos';
 
 @ApiTags('users')
 @Controller('users')
 export class UserController {
-  @Get()
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'List of users', type: [User] })
-  async getUsers(): Promise<User[]> {
-    // Implementation goes here
-    throw new Error('Method not implemented');
-  }
+    @Get()
+    @ApiOperation({summary: 'Get all users'})
+    @ApiResponse({status: 200, description: 'List of users', type: [User]})
+    async getUsers(): Promise<User[]> {
+        // Implementation goes here
+        throw new Error('Method not implemented');
+    }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User created', type: User })
-  async createUser(@Body() body: CreateUserRequest): Promise<User> {
-    // Implementation goes here
-    throw new Error('Method not implemented');
-  }
+    @Post()
+    @ApiOperation({summary: 'Create a new user'})
+    @ApiResponse({status: 201, description: 'User created', type: User})
+    async createUser(@Body() body: CreateUserRequest): Promise<User> {
+        // Implementation goes here
+        throw new Error('Method not implemented');
+    }
 }
 ```
 
 **DTOs** (`src/generated/dtos/user.dto.ts`):
+
 ```typescript
-import { IsString, IsEmail, IsUUID, MinLength, MaxLength, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {IsString, IsEmail, IsUUID, MinLength, MaxLength, IsNotEmpty} from 'class-validator';
+import {ApiProperty} from '@nestjs/swagger';
 
 export class User {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  id: string;
+    @ApiProperty({format: 'uuid'})
+    @IsUUID()
+    id: string;
 
-  @ApiProperty({ format: 'email' })
-  @IsEmail()
-  email: string;
+    @ApiProperty({format: 'email'})
+    @IsEmail()
+    email: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 50 })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  @IsNotEmpty()
-  firstName: string;
+    @ApiProperty({minLength: 1, maxLength: 50})
+    @IsString()
+    @MinLength(1)
+    @MaxLength(50)
+    @IsNotEmpty()
+    firstName: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 50 })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  @IsNotEmpty()
-  lastName: string;
+    @ApiProperty({minLength: 1, maxLength: 50})
+    @IsString()
+    @MinLength(1)
+    @MaxLength(50)
+    @IsNotEmpty()
+    lastName: string;
 }
 
 export class CreateUserRequest {
-  @ApiProperty({ format: 'email' })
-  @IsEmail()
-  email: string;
+    @ApiProperty({format: 'email'})
+    @IsEmail()
+    email: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 50 })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  @IsNotEmpty()
-  firstName: string;
+    @ApiProperty({minLength: 1, maxLength: 50})
+    @IsString()
+    @MinLength(1)
+    @MaxLength(50)
+    @IsNotEmpty()
+    firstName: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 50 })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  @IsNotEmpty()
-  lastName: string;
+    @ApiProperty({minLength: 1, maxLength: 50})
+    @IsString()
+    @MinLength(1)
+    @MaxLength(50)
+    @IsNotEmpty()
+    lastName: string;
 }
 ```
 
@@ -236,12 +248,12 @@ npx openapi-generate --config ./openapi.config.js
 
 ### CLI Options
 
-| Option | Alias | Description | Default |
-|--------|-------|-------------|---------|
-| `--config` | `-c` | Path to config file | `openapi.config.js` |
-| `--specs` | `-s` | Path to specs directory | `./specs` |
-| `--output` | `-o` | Output directory | `./src/generated` |
-| `--watch` | `-w` | Watch for changes | `false` |
+| Option     | Alias | Description             | Default             |
+|------------|-------|-------------------------|---------------------|
+| `--config` | `-c`  | Path to config file     | `openapi.config.js` |
+| `--specs`  | `-s`  | Path to specs directory | `./specs`           |
+| `--output` | `-o`  | Output directory        | `./src/generated`   |
+| `--watch`  | `-w`  | Watch for changes       | `false`             |
 
 ## Configuration
 
@@ -251,20 +263,20 @@ Create `openapi.config.js` in your project root:
 
 ```javascript
 module.exports = {
-  specsDir: './specs',
-  outputDir: './src/generated',
-  generateControllers: true,
-  generateDtos: true,
-  generateTypes: true,
-  generatorOptions: {
-    useSingleRequestParameter: false,
-    additionalProperties: {
-      // Custom properties for templates
+    specsDir: './specs',
+    outputDir: './src/generated',
+    generateControllers: true,
+    generateDtos: true,
+    generateTypes: true,
+    generatorOptions: {
+        useSingleRequestParameter: false,
+        additionalProperties: {
+            // Custom properties for templates
+        }
+    },
+    vendorExtensions: {
+        'x-controller-name': 'controllerName'
     }
-  },
-  vendorExtensions: {
-    'x-controller-name': 'controllerName'
-  }
 };
 ```
 
@@ -273,17 +285,17 @@ module.exports = {
 For TypeScript projects, create `openapi.config.ts`:
 
 ```typescript
-import { GeneratorConfig } from '@snow-tzu/nest-openapi-code-generator';
+import {GeneratorConfig} from '@snow-tzu/nest-openapi-code-generator';
 
 const config: GeneratorConfig = {
-  specsDir: './specs',
-  outputDir: './src/generated',
-  generateControllers: true,
-  generateDtos: true,
-  generateTypes: true,
-  generatorOptions: {
-    useSingleRequestParameter: false
-  }
+    specsDir: './specs',
+    outputDir: './src/generated',
+    generateControllers: true,
+    generateDtos: true,
+    generateTypes: true,
+    generatorOptions: {
+        useSingleRequestParameter: false
+    }
 };
 
 export default config;
@@ -291,27 +303,27 @@ export default config;
 
 ### Configuration Options
 
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
-| `specsDir` | `string` | Directory containing OpenAPI specs | `./specs` |
-| `outputDir` | `string` | Output directory for generated code | `./src/generated` |
-| `generateControllers` | `boolean` | Generate NestJS controllers | `true` |
-| `generateDtos` | `boolean` | Generate DTO classes | `true` |
-| `generateTypes` | `boolean` | Generate TypeScript types | `true` |
-| `templateDir` | `string` | Custom template directory | `undefined` |
-| `generatorOptions.useSingleRequestParameter` | `boolean` | Use single parameter for request body | `false` |
-| `generatorOptions.includeErrorTypesInReturnType` | `boolean` | Include error response types in method return types | `false` |
-| `vendorExtensions` | `object` | Custom vendor extension mappings | `{}` |
+| Option                                           | Type      | Description                                         | Default           |
+|--------------------------------------------------|-----------|-----------------------------------------------------|-------------------|
+| `specsDir`                                       | `string`  | Directory containing OpenAPI specs                  | `./specs`         |
+| `outputDir`                                      | `string`  | Output directory for generated code                 | `./src/generated` |
+| `generateControllers`                            | `boolean` | Generate NestJS controllers                         | `true`            |
+| `generateDtos`                                   | `boolean` | Generate DTO classes                                | `true`            |
+| `generateTypes`                                  | `boolean` | Generate TypeScript types                           | `true`            |
+| `templateDir`                                    | `string`  | Custom template directory                           | `undefined`       |
+| `generatorOptions.useSingleRequestParameter`     | `boolean` | Use single parameter for request body               | `false`           |
+| `generatorOptions.includeErrorTypesInReturnType` | `boolean` | Include error response types in method return types | `false`           |
+| `vendorExtensions`                               | `object`  | Custom vendor extension mappings                    | `{}`              |
 
 ## Programmatic API
 
 ### Basic Usage
 
 ```typescript
-import { 
-  generateFromConfig, 
-  GeneratorOrchestrator, 
-  ConfigLoader 
+import {
+    generateFromConfig,
+    GeneratorOrchestrator,
+    ConfigLoader
 } from '@snow-tzu/nest-openapi-code-generator';
 
 // Quick generation with default config
@@ -319,8 +331,8 @@ await generateFromConfig();
 
 // Custom configuration
 await generateFromConfig({
-  specsDir: './my-specs',
-  outputDir: './src/api'
+    specsDir: './my-specs',
+    outputDir: './src/api'
 });
 
 // Advanced usage with orchestrator
@@ -333,7 +345,7 @@ await orchestrator.generate();
 ### Parsing OpenAPI Specs
 
 ```typescript
-import { parseSpec, SpecParser } from '@snow-tzu/nest-openapi-code-generator';
+import {parseSpec, SpecParser} from '@snow-tzu/nest-openapi-code-generator';
 
 // Quick parsing
 const spec = await parseSpec('./specs/user.openapi.yaml');
@@ -346,11 +358,11 @@ const spec = await parser.parseSpec('./specs/user.openapi.yaml');
 ### File Watching
 
 ```typescript
-import { SpecWatcher } from '@snow-tzu/nest-openapi-code-generator';
+import {SpecWatcher} from '@snow-tzu/nest-openapi-code-generator';
 
 const watcher = new SpecWatcher({
-  specsDir: './specs',
-  outputDir: './src/generated'
+    specsDir: './specs',
+    outputDir: './src/generated'
 });
 
 await watcher.start();
@@ -367,14 +379,15 @@ The generator follows specific naming conventions based on your OpenAPI specific
 
 #### Spec File Names → Generated Class Names
 
-| Spec File | Generated Controller Class | Generated DTO File |
-|-----------|---------------------------|-------------------|
-| `user.openapi.yaml` | `UserControllerBase` | `user.dto.ts` |
-| `user.query.openapi.yaml` | `UserQueryControllerBase` | `user.query.dto.ts` |
+| Spec File                       | Generated Controller Class      | Generated DTO File        |
+|---------------------------------|---------------------------------|---------------------------|
+| `user.openapi.yaml`             | `UserControllerBase`            | `user.dto.ts`             |
+| `user.query.openapi.yaml`       | `UserQueryControllerBase`       | `user.query.dto.ts`       |
 | `order-management.openapi.yaml` | `OrderManagementControllerBase` | `order-management.dto.ts` |
-| `api.v1.users.openapi.yaml` | `ApiV1UsersControllerBase` | `api.v1.users.dto.ts` |
+| `api.v1.users.openapi.yaml`     | `ApiV1UsersControllerBase`      | `api.v1.users.dto.ts`     |
 
 The generator automatically:
+
 - Splits file names on dots (`.`), hyphens (`-`), and underscores (`_`)
 - Capitalizes each part using PascalCase
 - Joins them together for the class name
@@ -383,23 +396,25 @@ The generator automatically:
 
 #### Empty Controller Decorator with Full Paths
 
-Controllers are generated with an empty `@Controller()` decorator, and full paths are specified in HTTP method decorators:
+Controllers are generated with an empty `@Controller()` decorator, and full paths are specified in HTTP method
+decorators:
 
 ```typescript
+
 @Controller()  // Empty controller path
 export abstract class UserControllerBase {
-  
-  @Get('/users')  // Full path in HTTP method
-  @ApiOperation({ summary: 'Get all users' })
-  getUsers(): Promise<User[]> {
-    throw new NotImplementedException('getUsers not yet implemented');
-  }
-  
-  @Post('/users')  // Full path in HTTP method
-  @ApiOperation({ summary: 'Create user' })
-  createUser(@Body() body: CreateUserDto): Promise<User> {
-    throw new NotImplementedException('createUser not yet implemented');
-  }
+
+    @Get('/users')  // Full path in HTTP method
+    @ApiOperation({summary: 'Get all users'})
+    getUsers(): Promise<User[]> {
+        throw new NotImplementedException('getUsers not yet implemented');
+    }
+
+    @Post('/users')  // Full path in HTTP method
+    @ApiOperation({summary: 'Create user'})
+    createUser(@Body() body: CreateUserDto): Promise<User> {
+        throw new NotImplementedException('createUser not yet implemented');
+    }
 }
 ```
 
@@ -414,11 +429,16 @@ Method parameters are automatically ordered for TypeScript compliance:
 ```typescript
 // Correct parameter ordering
 updateUser(
-  @Param('userId') userId: string,           // Required path parameter
-  @Body() body: UpdateUserDto,               // Required body parameter  
-  @Query('include') include?: string,        // Optional query parameter
-  @Headers('X-Trace-Id') traceId?: string   // Optional header parameter
-): Promise<User>
+    @Param('userId')
+userId: string,           // Required path parameter
+@Body()
+body: UpdateUserDto,               // Required body parameter  
+@Query('include')
+include ? : string,        // Optional query parameter
+@Headers('X-Trace-Id')
+traceId ? : string   // Optional header parameter
+):
+Promise<User>
 ```
 
 #### Union Return Types
@@ -437,9 +457,12 @@ By default, only success response types (2xx status codes) are included in the r
 // 404: NotFoundError
 
 @Post('/users')
-createUser(@Body() body: CreateUserDto): Promise<User | UserCreated> {
-  // Only success types in return type
-  // Error types are still used for @ApiResponse decorators
+createUser(@Body()
+body: CreateUserDto
+):
+Promise < User | UserCreated > {
+    // Only success types in return type
+    // Error types are still used for @ApiResponse decorators
 }
 ```
 
@@ -450,48 +473,54 @@ You can configure the generator to include error response types in the return ty
 ```javascript
 // openapi.config.js
 module.exports = {
-  generatorOptions: {
-    includeErrorTypesInReturnType: true
-  }
+    generatorOptions: {
+        includeErrorTypesInReturnType: true
+    }
 };
 ```
 
 ```typescript
 // With error types included:
 @Post('/users')
-createUser(@Body() body: CreateUserDto): Promise<User | UserCreated | ValidationError | NotFoundError> {
-  // All response types included in return type
+createUser(@Body()
+body: CreateUserDto
+):
+Promise < User | UserCreated | ValidationError | NotFoundError > {
+    // All response types included in return type
 }
 ```
 
 ##### Configuration Examples
 
 **Success types only (default):**
+
 ```javascript
 module.exports = {
-  generatorOptions: {
-    includeErrorTypesInReturnType: false // Default
-  }
+    generatorOptions: {
+        includeErrorTypesInReturnType: false // Default
+    }
 };
 ```
 
 **Include all response types:**
+
 ```javascript
 module.exports = {
-  generatorOptions: {
-    includeErrorTypesInReturnType: true
-  }
+    generatorOptions: {
+        includeErrorTypesInReturnType: true
+    }
 };
 ```
 
 **TypeScript configuration:**
+
 ```typescript
-import { GeneratorConfig } from '@snow-tzu/nest-openapi-code-generator';
+import {GeneratorConfig} from '@snow-tzu/nest-openapi-code-generator';
 
 const config: GeneratorConfig = {
-  generatorOptions: {
-    includeErrorTypesInReturnType: true
-  }
+    generatorOptions: {
+        includeErrorTypesInReturnType: true
+    }
 };
 ```
 
@@ -504,19 +533,24 @@ const config: GeneratorConfig = {
 
 ```typescript
 // Example usage with union types
-async createUser(body: CreateUserDto): Promise<User | ValidationError> {
-  try {
-    const user = await this.userService.create(body);
-    return user; // Type: User
-  } catch (error) {
-    if (error instanceof ValidationException) {
-      return { 
-        code: 'VALIDATION_ERROR', 
-        message: error.message 
-      }; // Type: ValidationError
+async
+createUser(body
+:
+CreateUserDto
+):
+Promise < User | ValidationError > {
+    try {
+        const user = await this.userService.create(body);
+        return user; // Type: User
+    } catch(error) {
+        if (error instanceof ValidationException) {
+            return {
+                code: 'VALIDATION_ERROR',
+                message: error.message
+            }; // Type: ValidationError
+        }
+        throw error;
     }
-    throw error;
-  }
 }
 ```
 
@@ -527,24 +561,25 @@ All generated controllers are abstract base classes that you extend in your impl
 ```typescript
 // Generated: user.controller.base.ts
 export abstract class UserControllerBase {
-  abstract getUsers(): Promise<User[]>;
-  abstract createUser(body: CreateUserDto): Promise<User>;
+    abstract getUsers(): Promise<User[]>;
+
+    abstract createUser(body: CreateUserDto): Promise<User>;
 }
 
 // Your implementation: user.controller.ts
 @Injectable()
 export class UserController extends UserControllerBase {
-  constructor(private userService: UserService) {
-    super();
-  }
+    constructor(private userService: UserService) {
+        super();
+    }
 
-  async getUsers(): Promise<User[]> {
-    return this.userService.getUsers();
-  }
+    async getUsers(): Promise<User[]> {
+        return this.userService.getUsers();
+    }
 
-  async createUser(body: CreateUserDto): Promise<User> {
-    return this.userService.createUser(body);
-  }
+    async createUser(body: CreateUserDto): Promise<User> {
+        return this.userService.createUser(body);
+    }
 }
 ```
 
@@ -571,21 +606,22 @@ src/generated/
 
 You can provide custom Handlebars templates for code generation:
 
-1. Create a templates directory:
-```
-templates/
-├── controller.hbs
-├── dto.hbs
-└── types.hbs
-```
+1. Create the templates' directory:
+    ```
+    templates/
+    ├── controller.hbs
+    ├── dto.hbs
+    └── types.hbs
+    ```
 
 2. Configure the template directory:
-```javascript
-module.exports = {
-  templateDir: './templates',
-  // ... other options
-};
-```
+
+    ```javascript
+    module.exports = {
+        templateDir: './templates',
+        // ... other options
+    };
+    ```
 
 ### Vendor Extensions
 
@@ -603,10 +639,10 @@ paths:
 ```javascript
 // In your config
 module.exports = {
-  vendorExtensions: {
-    'x-controller-name': 'controllerName',
-    'x-custom-decorator': 'customDecorator'
-  }
+    vendorExtensions: {
+        'x-controller-name': 'controllerName',
+        'x-custom-decorator': 'customDecorator'
+    }
 };
 ```
 
@@ -630,56 +666,57 @@ Each spec file generates its own set of controllers and DTOs.
 
 ```typescript
 // app.module.ts
-import { Module } from '@nestjs/common';
-import { UserController } from './generated/controllers/user.controller';
+import {Module} from '@nestjs/common';
+import {UserController} from './generated/controllers/user.controller';
 
 @Module({
-  controllers: [UserController],
-  // ... other module configuration
+    controllers: [UserController],
+    // ... other module configuration
 })
-export class AppModule {}
+export class AppModule {
+}
 ```
 
 ### 2. Implement Controller Methods
 
 ```typescript
 // user.service.ts
-import { Injectable } from '@nestjs/common';
-import { User, CreateUserRequest } from './generated/dtos';
+import {Injectable} from '@nestjs/common';
+import {User, CreateUserRequest} from './generated/dtos';
 
 @Injectable()
 export class UserService {
-  async getUsers(): Promise<User[]> {
-    // Your implementation
-    return [];
-  }
+    async getUsers(): Promise<User[]> {
+        // Your implementation
+        return [];
+    }
 
-  async createUser(request: CreateUserRequest): Promise<User> {
-    // Your implementation
-    return {} as User;
-  }
+    async createUser(request: CreateUserRequest): Promise<User> {
+        // Your implementation
+        return {} as User;
+    }
 }
 ```
 
 ```typescript
 // user.controller.ts (extend generated controller)
-import { Injectable } from '@nestjs/common';
-import { UserController as GeneratedUserController } from './generated/controllers/user.controller';
-import { UserService } from './user.service';
+import {Injectable} from '@nestjs/common';
+import {UserController as GeneratedUserController} from './generated/controllers/user.controller';
+import {UserService} from './user.service';
 
 @Injectable()
 export class UserController extends GeneratedUserController {
-  constructor(private userService: UserService) {
-    super();
-  }
+    constructor(private userService: UserService) {
+        super();
+    }
 
-  async getUsers() {
-    return this.userService.getUsers();
-  }
+    async getUsers() {
+        return this.userService.getUsers();
+    }
 
-  async createUser(body) {
-    return this.userService.createUser(body);
-  }
+    async createUser(body) {
+        return this.userService.createUser(body);
+    }
 }
 ```
 
@@ -689,21 +726,22 @@ The generated DTOs work seamlessly with NestJS validation:
 
 ```typescript
 // main.ts
-import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import {ValidationPipe} from '@nestjs/common';
+import {NestFactory} from '@nestjs/core';
+import {AppModule} from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
-  
-  await app.listen(3000);
+    const app = await NestFactory.create(AppModule);
+
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+    }));
+
+    await app.listen(3000);
 }
+
 bootstrap();
 ```
 
@@ -797,26 +835,34 @@ paths:
 ### Common Issues
 
 #### 1. "Cannot find module" errors
+
 Make sure you've installed all peer dependencies:
+
 ```bash
 yarn install @nestjs/common @nestjs/swagger class-validator class-transformer
 ```
 
-#### 2. Validation not working
+#### 2. Validation is not working
+
 Ensure you have the ValidationPipe configured:
+
 ```typescript
 app.useGlobalPipes(new ValidationPipe());
 ```
 
 #### 3. Generated files not updating
+
 Try clearing the output directory and regenerating:
+
 ```bash
 rm -rf src/generated
 npx openapi-generate
 ```
 
 #### 4. TypeScript compilation errors
+
 Check that your `tsconfig.json` includes the generated files:
+
 ```json
 {
   "include": [
@@ -829,41 +875,46 @@ Check that your `tsconfig.json` includes the generated files:
 ### Debug Mode
 
 Enable debug logging:
+
 ```bash
 DEBUG=openapi-generator npx openapi-generate
 ```
 
 Or programmatically:
+
 ```typescript
-import { Logger, LogLevel } from '@snow-tzu/nest-openapi-code-generator';
+import {Logger, LogLevel} from '@snow-tzu/nest-openapi-code-generator';
 
 const logger = new Logger();
 logger.setLevel(LogLevel.DEBUG);
 ```
 
-
 ### Development Setup
 
 1. Clone the repository:
-```bash
-git clone https://github.com/ganesanarun/nest-openapi-code-generator.git
-cd nest-openapi-code-generator
-```
+
+    ```bash
+    git clone https://github.com/ganesanarun/nest-openapi-code-generator.git
+    cd nest-openapi-code-generator
+    ```
 
 2. Install dependencies:
-```bash
-yarn install
-```
+
+    ```bash
+    yarn install
+    ```
 
 3. Run tests:
-```bash
-yarn test
-```
+
+    ```bash
+    yarn test
+    ```
 
 4. Build the project:
-```bash
-yarn run build
-```
+
+    ```bash
+    yarn run build
+    ```
 
 ## License
 
@@ -871,7 +922,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 📖 [Documentation](https://github.com/openapi-nestjs/generator/wiki)
-- 🐛 [Issue Tracker](https://github.com/openapi-nestjs/generator/issues)
-- 💬 [Discussions](https://github.com/openapi-nestjs/generator/discussions)
+- 📖 [Documentation](https://github.com/ganesanarun/nest-openapi-code-generator/wiki)
+- 🐛 [Issue Tracker](https://github.com/ganesanarun/nest-openapi-code-generator/issues)
 - 📧 [Email Support](mailto:ganesan1063@gmail.com)
