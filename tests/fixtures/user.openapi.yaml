@@ -279,6 +279,11 @@ components:
           example: "Doe"
           minLength: 1
           maxLength: 50
+        dateOfBirth:
+          type: string
+          format: date
+          description: User's date of birth
+          example: "2001-04-26"
         age:
           type: integer
           description: User's age
