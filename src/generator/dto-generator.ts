@@ -196,6 +196,18 @@ export class DtoGenerator {
       if (schema.format === 'email') {
         decorators.push('@IsEmail()');
       }
+      
+      if (schema.format === 'uuid') {
+        decorators.push('@IsUUID()');
+      } 
+      
+      if (schema.format === 'date') {
+        decorators.push('@IsDateString()');
+      }
+      
+      if (schema.format === 'date-time') {
+        decorators.push('@IsDateTimeString()');
+      } 
 
       if (schema.enum) {
         const enumName = this.getEnumName(name, schema.enum);
