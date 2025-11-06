@@ -528,7 +528,7 @@ describe('ControllerGenerator', () => {
 
       expect(result).toContain('getProducts(');
       expect(result).toContain('): Promise<ProductDto[]>'); // array of referenced DTOs
-      expect(result).toContain('@ApiResponse({ status: 200, type: ProductDto');
+      expect(result).toContain('@ApiResponse({ status: 200, type: [ProductDto]');
     });
 
     it('should handle paginated array responses', async () => {
@@ -715,7 +715,7 @@ describe('ControllerGenerator', () => {
 
       expect(result).toContain('getProducts(');
       expect(result).toContain('): Promise<ProductDto[]>');
-      expect(result).toContain('@ApiResponse({ status: 200, type: ProductDto');
+      expect(result).toContain('@ApiResponse({ status: 200, type: [ProductDto]');
       expect(result).toContain('ProductDto');
     });
 

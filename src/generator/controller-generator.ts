@@ -357,10 +357,16 @@ export class ControllerGenerator {
             });
 
         responses.forEach(r => {
-            const options = r.type !== 'void' && r.type !== 'any' && r.status !== 204
-                ? `{ status: ${r.status}, type: ${r.type} }`
-                : `{ status: ${r.status} }`;
-            decorators.push(`@ApiResponse(${options})`);
+            if (r.type !== 'void' && r.type !== 'any' && r.status !== 204) {
+                // Convert array types from UserDto[] to [UserDto] for Swagger
+                const swaggerType = r.type.endsWith('[]')
+                    ? `[${r.type.slice(0, -2)}]`
+                    : r.type;
+                const options = `{ status: ${r.status}, type: ${swaggerType} }`;
+                decorators.push(`@ApiResponse(${options})`);
+            } else {
+                decorators.push(`@ApiResponse({ status: ${r.status} })`);
+            }
         });
 
         const successResponse = responses.find(r => r.status >= 200 && r.status < 300);
@@ -381,7 +387,12 @@ export class ControllerGenerator {
         // If we have the original reference, use that
         if (originalRef) {
             const refName = originalRef.split('/').pop();
-            return `${refName}Dto`;
+            // Check if this is for an array response
+            if (schema.type === 'array') {
+                return `${refName}Dto[]`;
+            } else {
+                return `${refName}Dto`;
+            }
         }
 
         if (schema.$ref) {
