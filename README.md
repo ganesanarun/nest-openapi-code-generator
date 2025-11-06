@@ -149,33 +149,73 @@ await generateFromConfig({
 
 The generator will create:
 
-**Controllers** (`src/generated/controllers/user.controller.ts`):
+**Controllers** (`src/generated/user/user.controller.base.ts`):
 
 ```typescript
-import {Controller, Get, Post, Body} from '@nestjs/common';
-import {ApiTags, ApiOperation, ApiResponse} from '@nestjs/swagger';
-import {User, CreateUserRequest} from '../dtos';
+import {
+    Get, Post, Put, Patch, Delete,
+    Body, Param, Query, Headers, HttpCode
+} from '@nestjs/common';
+import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader} from '@nestjs/swagger';
+import {CreateUserRequestDto, UserDto} from './user.dto';
 
 @ApiTags('users')
-@Controller('users')
-export class UserController {
-    @Get()
+export abstract class UserControllerBase {
+    // Decorated method with all NestJS annotations
+    @Get('/users')
     @ApiOperation({summary: 'Get all users'})
-    @ApiResponse({status: 200, description: 'List of users', type: [User]})
-    async getUsers(): Promise<User[]> {
-        // Implementation goes here
-        throw new Error('Method not implemented');
+    @ApiResponse({status: 200, type: [UserDto]})
+    _getUsers(): Promise<UserDto[]> {
+        return this.getUsers();
     }
 
-    @Post()
+    // Abstract method for your implementation (no decorators)
+    abstract getUsers(): Promise<UserDto[]>;
+
+    @Post('/users')
     @ApiOperation({summary: 'Create a new user'})
-    @ApiResponse({status: 201, description: 'User created', type: User})
-    async createUser(@Body() body: CreateUserRequest): Promise<User> {
-        // Implementation goes here
-        throw new Error('Method not implemented');
+    @ApiResponse({status: 201, type: UserDto})
+    _createUser(
+        @Body() body: CreateUserRequestDto
+    ): Promise<UserDto> {
+        return this.createUser(body);
+    }
+
+    abstract createUser(body: CreateUserRequestDto): Promise<UserDto>;
+}
+```
+
+**Implementation** (`src/modules/user/user.controller.ts`):
+
+```typescript
+import {Controller} from '@nestjs/common';
+import {UserControllerBase} from '../../generated/user/user.controller.base';
+import {CreateUserRequestDto, UserDto} from '../../generated/user/user.dto';
+import {UserService} from './user.service';
+
+@Controller('users') // Add @Controller here for dependency injection
+export class UserController extends UserControllerBase {
+    constructor(private readonly userService: UserService) {
+        super();
+    }
+
+    // Clean implementation without decorators - just business logic
+    async getUsers(): Promise<UserDto[]> {
+        return this.userService.findAll();
+    }
+
+    async createUser(body: CreateUserRequestDto): Promise<UserDto> {
+        return this.userService.create(body);
     }
 }
 ```
+
+**Key Benefits of the Override Pattern:**
+
+- 🎯 **Clean Separation**: Framework concerns (decorators) are separated from business logic
+- 🔧 **Easy Override**: Just implement the abstract methods without worrying about decorators
+- 🚀 **Dependency Injection**: Add `@Controller()` to your implementation class for proper DI
+- 📝 **Type Safety**: Both methods have identical signatures ensuring type safety
 
 **DTOs** (`src/generated/dtos/user.dto.ts`):
 
@@ -392,197 +432,6 @@ The generator automatically:
 - Capitalizes each part using PascalCase
 - Joins them together for the class name
 
-### Controller Generation Patterns
-
-#### Empty Controller Decorator with Full Paths
-
-Controllers are generated with an empty `@Controller()` decorator, and full paths are specified in HTTP method
-decorators:
-
-```typescript
-
-@Controller()  // Empty controller path
-export abstract class UserControllerBase {
-
-    @Get('/users')  // Full path in HTTP method
-    @ApiOperation({summary: 'Get all users'})
-    getUsers(): Promise<User[]> {
-        throw new NotImplementedException('getUsers not yet implemented');
-    }
-
-    @Post('/users')  // Full path in HTTP method
-    @ApiOperation({summary: 'Create user'})
-    createUser(@Body() body: CreateUserDto): Promise<User> {
-        throw new NotImplementedException('createUser not yet implemented');
-    }
-}
-```
-
-#### Parameter Ordering
-
-Method parameters are automatically ordered for TypeScript compliance:
-
-1. **Required parameters first**: Path parameters, required body parameters
-2. **Optional parameters last**: Optional query parameters, optional headers
-3. **Within each group**: Ordered by type priority (path → body → query → header)
-
-```typescript
-// Correct parameter ordering
-updateUser(
-    @Param('userId')
-userId: string,           // Required path parameter
-@Body()
-body: UpdateUserDto,               // Required body parameter  
-@Query('include')
-include ? : string,        // Optional query parameter
-@Headers('X-Trace-Id')
-traceId ? : string   // Optional header parameter
-):
-Promise<User>
-```
-
-#### Union Return Types
-
-The generator automatically creates TypeScript union types for methods that can return multiple response types:
-
-##### Success Types Only (Default)
-
-By default, only success response types (2xx status codes) are included in the return type:
-
-```typescript
-// OpenAPI spec with multiple success responses:
-// 200: User
-// 201: UserCreated  
-// 400: ValidationError
-// 404: NotFoundError
-
-@Post('/users')
-createUser(@Body()
-body: CreateUserDto
-):
-Promise < User | UserCreated > {
-    // Only success types in return type
-    // Error types are still used for @ApiResponse decorators
-}
-```
-
-##### Including Error Types
-
-You can configure the generator to include error response types in the return type:
-
-```javascript
-// openapi.config.js
-module.exports = {
-    generatorOptions: {
-        includeErrorTypesInReturnType: true
-    }
-};
-```
-
-```typescript
-// With error types included:
-@Post('/users')
-createUser(@Body()
-body: CreateUserDto
-):
-Promise < User | UserCreated | ValidationError | NotFoundError > {
-    // All response types included in return type
-}
-```
-
-##### Configuration Examples
-
-**Success types only (default):**
-
-```javascript
-module.exports = {
-    generatorOptions: {
-        includeErrorTypesInReturnType: false // Default
-    }
-};
-```
-
-**Include all response types:**
-
-```javascript
-module.exports = {
-    generatorOptions: {
-        includeErrorTypesInReturnType: true
-    }
-};
-```
-
-**TypeScript configuration:**
-
-```typescript
-import {GeneratorConfig} from '@snow-tzu/nest-openapi-code-generator';
-
-const config: GeneratorConfig = {
-    generatorOptions: {
-        includeErrorTypesInReturnType: true
-    }
-};
-```
-
-##### Benefits of Union Return Types
-
-1. **Type Safety**: TypeScript will enforce that you handle all possible return types
-2. **Better IDE Support**: IntelliSense shows all possible response types
-3. **Runtime Safety**: Helps catch cases where different response types are returned
-4. **Documentation**: Makes the API contract explicit in the code
-
-```typescript
-// Example usage with union types
-async
-createUser(body
-:
-CreateUserDto
-):
-Promise < User | ValidationError > {
-    try {
-        const user = await this.userService.create(body);
-        return user; // Type: User
-    } catch(error) {
-        if (error instanceof ValidationException) {
-            return {
-                code: 'VALIDATION_ERROR',
-                message: error.message
-            }; // Type: ValidationError
-        }
-        throw error;
-    }
-}
-```
-
-#### Abstract Base Classes
-
-All generated controllers are abstract base classes that you extend in your implementation:
-
-```typescript
-// Generated: user.controller.base.ts
-export abstract class UserControllerBase {
-    abstract getUsers(): Promise<User[]>;
-
-    abstract createUser(body: CreateUserDto): Promise<User>;
-}
-
-// Your implementation: user.controller.ts
-@Injectable()
-export class UserController extends UserControllerBase {
-    constructor(private userService: UserService) {
-        super();
-    }
-
-    async getUsers(): Promise<User[]> {
-        return this.userService.getUsers();
-    }
-
-    async createUser(body: CreateUserDto): Promise<User> {
-        return this.userService.createUser(body);
-    }
-}
-```
-
 ### Directory Structure
 
 Generated files are organized by resource name:
@@ -662,22 +511,7 @@ Each spec file generates its own set of controllers and DTOs.
 
 ## Integration with NestJS
 
-### 1. Import Generated Controllers
-
-```typescript
-// app.module.ts
-import {Module} from '@nestjs/common';
-import {UserController} from './generated/controllers/user.controller';
-
-@Module({
-    controllers: [UserController],
-    // ... other module configuration
-})
-export class AppModule {
-}
-```
-
-### 2. Implement Controller Methods
+### 1. Extend Generated Controller Base Class
 
 ```typescript
 // user.service.ts
@@ -700,23 +534,40 @@ export class UserService {
 
 ```typescript
 // user.controller.ts (extend generated controller)
-import {Injectable} from '@nestjs/common';
-import {UserController as GeneratedUserController} from './generated/controllers/user.controller';
+import {Controller} from '@nestjs/common';
+import {UserControllerBase} from './generated/user/user.controller.base';
 import {UserService} from './user.service';
+import {CreateUserRequestDto, UserDto} from './generated/user/user.dto';
 
-@Injectable()
-export class UserController extends GeneratedUserController {
+@Controller() // Add @Controller for dependency injection
+export class UserController extends UserControllerBase {
     constructor(private userService: UserService) {
         super();
     }
 
-    async getUsers() {
+    // Clean implementation without decorators
+    async getUsers(): Promise<UserDto[]> {
         return this.userService.getUsers();
     }
 
-    async createUser(body) {
+    async createUser(body: CreateUserRequestDto): Promise<UserDto> {
         return this.userService.createUser(body);
     }
+}
+```
+
+### 2. Import Implemented Controller
+
+```typescript
+// app.module.ts
+import {Module} from '@nestjs/common';
+import {UserController} from './controllers/user.controller';
+
+@Module({
+    controllers: [UserController],
+    // ... other module configuration
+})
+export class AppModule {
 }
 ```
 

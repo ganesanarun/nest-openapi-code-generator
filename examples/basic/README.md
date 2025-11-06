@@ -26,34 +26,69 @@ basic/
 ## Setup
 
 1. Install dependencies:
-```bash
-npm install
-```
+    ```bash
+    npm install
+    ```
 
 2. Generate code from OpenAPI spec:
-```bash
-npm run generate
-```
+    ```bash
+    npm run generate
+    ```
 
 3. Start the development server:
-```bash
-npm run start:dev
-```
+    ```bash
+    npm run start:dev
+    ```
 
 ## Generated Code
 
 The generator will create:
-- Controllers with proper NestJS decorators
-- DTOs with validation decorators
-- TypeScript type definitions
+- **Abstract base controllers** with the override pattern separating framework concerns from business logic
+- **DTOs** with validation decorators
+- **TypeScript type definitions**
+
+### Controller Override Pattern
+
+The generated controllers use a clean override pattern:
+
+```typescript
+// Generated: src/generated/user/user.controller.base.ts
+@ApiTags('users')
+export abstract class UserControllerBase {
+  // Decorated method with framework concerns
+  @Get('/users')
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, type: [UserDto] })
+  _getUsers(): Promise<UserDto[]> {
+    return this.getUsers(); // Calls your implementation
+  }
+
+  // Abstract method for your clean implementation
+  abstract getUsers(): Promise<UserDto[]>;
+}
+
+// Your implementation: src/user/user.controller.ts
+@Controller() // Add @Controller for dependency injection
+export class UserController extends UserControllerBase {
+  constructor(private userService: UserService) {
+    super();
+  }
+
+  // Clean implementation without decorators
+  async getUsers(): Promise<UserDto[]> {
+    return this.userService.findAll();
+  }
+}
+```
 
 ## Implementation
 
 The example shows how to:
 - Define a simple OpenAPI specification
 - Configure the generator
-- Implement the generated controller methods
-- Set up validation pipeline
+- **Extend generated base controllers** using the override pattern
+- **Implement clean business logic** without framework decorators
+- Set up a validation pipeline
 - Integrate with a NestJS application
 
 ## API Endpoints

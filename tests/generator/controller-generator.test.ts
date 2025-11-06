@@ -21,8 +21,8 @@ describe('ControllerGenerator', () => {
       const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
 
       expect(result).toContain('import {');
-      expect(result).toContain('Controller, Get, Post, Put, Patch, Delete,');
-      expect(result).toContain('Body, Param, Query, Headers, HttpCode, NotImplementedException');
+      expect(result).toContain('Get, Post, Put, Patch, Delete,');
+      expect(result).toContain('Body, Param, Query, Headers, HttpCode');
       expect(result).toContain('} from \'@nestjs/common\'');
 
       expect(result).toContain('import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader } from \'@nestjs/swagger\'');
@@ -33,7 +33,7 @@ describe('ControllerGenerator', () => {
     it('should generate controller with proper decorators', async () => {
       const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
 
-      expect(result).toContain('@Controller()');
+      expect(result).not.toContain('@Controller()');
       expect(result).toContain('@ApiTags(\'users\', \'profile\')');
     });
 
@@ -147,14 +147,14 @@ describe('ControllerGenerator', () => {
       expect(result).toContain('): Promise<void>');
     });
 
-    it('should include NotImplementedException in method bodies', async () => {
+    it('should call abstract methods from decorated methods', async () => {
       const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
 
-      expect(result).toContain('throw new NotImplementedException(\'getUsers not yet implemented\')');
-      expect(result).toContain('throw new NotImplementedException(\'createUser not yet implemented\')');
-      expect(result).toContain('throw new NotImplementedException(\'getUserById not yet implemented\')');
-      expect(result).toContain('throw new NotImplementedException(\'updateUser not yet implemented\')');
-      expect(result).toContain('throw new NotImplementedException(\'deleteUser not yet implemented\')');
+      expect(result).toContain('return this.getUsers(');
+      expect(result).toContain('return this.createUser(');
+      expect(result).toContain('return this.getUserById(');
+      expect(result).toContain('return this.updateUser(');
+      expect(result).toContain('return this.deleteUser(');
     });
 
     it('should generate DTO imports based on used schemas', async () => {
@@ -578,7 +578,7 @@ describe('ControllerGenerator', () => {
 
       // Should use default template
       expect(result).toContain('export abstract class UserControllerBase');
-      expect(result).toContain('throw new NotImplementedException');
+      expect(result).toContain('return this.');
     });
 
     it('should handle template loading errors gracefully', async () => {
@@ -589,7 +589,7 @@ describe('ControllerGenerator', () => {
       const result = await controllerGeneratorWithInvalidPath.generateController('user', testSpec.paths, testSpec);
       
       expect(result).toContain('export abstract class UserControllerBase');
-      expect(result).toContain('throw new NotImplementedException');
+      expect(result).toContain('return this.');
     });
   });
 
@@ -992,7 +992,6 @@ describe('ControllerGenerator', () => {
 
       const result = await controllerGenerator.generateController('user', pathsWithConsistentBase, testSpec);
 
-      expect(result).toContain('@Controller()');
       expect(result).toContain('@Get(\'/api/v1/users\')');
       expect(result).toContain('@Get(\'/api/v1/users/{userId}\')');
     });
@@ -1021,7 +1020,6 @@ describe('ControllerGenerator', () => {
       const result = await controllerGenerator.generateController('item', pathsWithMixedStructure, testSpec);
 
       // Should use empty controller with full paths in HTTP methods
-      expect(result).toContain('@Controller()');
       expect(result).toContain('@Get(\'/items\')');
       expect(result).toContain('@Get(\'/products/{productId}\')');
     });
@@ -1039,7 +1037,6 @@ describe('ControllerGenerator', () => {
 
       const result = await controllerGenerator.generateController('health', singleEndpointPaths, testSpec);
 
-      expect(result).toContain('@Controller()');
       expect(result).toContain('@Get(\'/health\')');
     });
 
@@ -1070,7 +1067,6 @@ describe('ControllerGenerator', () => {
 
       const result = await controllerGenerator.generateController('employee', nestedResourcePaths, testSpec);
 
-      expect(result).toContain('@Controller()');
       expect(result).toContain('@Get(\'/companies/{companyId}/employees\')');
       expect(result).toContain('@Get(\'/companies/{companyId}/employees/{employeeId}\')');
     });
@@ -1584,12 +1580,212 @@ describe('ControllerGenerator', () => {
     });
   });
 
+  describe('controller method override pattern', () => {
+    it('should generate methods with underscore prefix containing decorators', async () => {
+      const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
+
+      // Should generate decorated methods with underscore prefix
+      expect(result).toContain('_getUsers(');
+      expect(result).toContain('_createUser(');
+      expect(result).toContain('_getUserById(');
+      expect(result).toContain('_updateUser(');
+      expect(result).toContain('_deleteUser(');
+      expect(result).toContain('_updateUserProfile(');
+
+      // Decorated methods should have all the decorators
+      expect(result).toContain('@Get(\'/users\')');
+      expect(result).toContain('@ApiOperation({ summary: \'Get all users\' })');
+      expect(result).toContain('@Post(\'/users\')');
+      expect(result).toContain('@ApiOperation({ summary: \'Create a new user\' })');
+    });
+
+    it('should generate abstract methods without decorators for user implementation', async () => {
+      const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
+
+      // Should generate abstract methods without decorators
+      expect(result).toContain('abstract getUsers(');
+      expect(result).toContain('abstract createUser(');
+      expect(result).toContain('abstract getUserById(');
+      expect(result).toContain('abstract updateUser(');
+      expect(result).toContain('abstract deleteUser(');
+      expect(result).toContain('abstract updateUserProfile(');
+
+      // Check that abstract methods don't have decorators immediately before them
+      const abstractMethods = [
+        'abstract getUsers(',
+        'abstract createUser(',
+        'abstract getUserById(',
+        'abstract updateUser(',
+        'abstract deleteUser(',
+        'abstract updateUserProfile('
+      ];
+
+      abstractMethods.forEach(methodSignature => {
+        const methodIndex = result.indexOf(methodSignature);
+        expect(methodIndex).toBeGreaterThan(-1);
+        
+        // Get the 100 characters before the abstract method
+        const beforeMethod = result.substring(Math.max(0, methodIndex - 100), methodIndex);
+        
+        // Should not contain HTTP method decorators immediately before
+        expect(beforeMethod).not.toMatch(/@(Get|Post|Put|Patch|Delete)\s*$/);
+        expect(beforeMethod).not.toMatch(/@ApiOperation\s*$/);
+        expect(beforeMethod).not.toMatch(/@ApiParam\s*$/);
+        expect(beforeMethod).not.toMatch(/@ApiQuery\s*$/);
+        expect(beforeMethod).not.toMatch(/@ApiResponse\s*$/);
+      });
+    });
+
+    it('should make decorated methods call abstract methods with proper parameters', async () => {
+      const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
+
+      // Decorated methods should call abstract methods
+      expect(result).toContain('return this.getUsers(');
+      expect(result).toContain('return this.createUser(');
+      expect(result).toContain('return this.getUserById(');
+      expect(result).toContain('return this.updateUser(');
+      expect(result).toContain('return this.deleteUser(');
+      expect(result).toContain('return this.updateUserProfile(');
+
+      // Should pass parameters correctly
+      expect(result).toContain('return this.getUsers(limit, page, status)');
+      expect(result).toContain('return this.createUser(body)');
+      expect(result).toContain('return this.getUserById(userId)');
+      expect(result).toContain('return this.updateUser(userId, body)');
+      expect(result).toContain('return this.deleteUser(userId)');
+      expect(result).toContain('return this.updateUserProfile(userId, body)');
+    });
+
+    it('should handle methods with mixed parameter types in override pattern', async () => {
+      const pathsWithMixedParams = {
+        '/items/{itemId}': {
+          put: {
+            operationId: 'updateItem',
+            summary: 'Update item with mixed parameters',
+            parameters: [
+              {
+                name: 'itemId',
+                in: 'path' as const,
+                required: true,
+                schema: { type: 'string' }
+              },
+              {
+                name: 'version',
+                in: 'query' as const,
+                required: false,
+                schema: { type: 'number' }
+              },
+              {
+                name: 'X-Request-ID',
+                in: 'header' as const,
+                required: true,
+                schema: { type: 'string' }
+              }
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/UpdateItemRequest'
+                  }
+                }
+              }
+            },
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      $ref: '#/components/schemas/Item'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const result = await controllerGenerator.generateController('item', pathsWithMixedParams, testSpec);
+
+      // Should generate decorated method with underscore
+      expect(result).toContain('_updateItem(');
+      expect(result).toContain('@Put(\'/items/{itemId}\')');
+      expect(result).toContain('@Param(\'itemId\') itemId: string');
+      expect(result).toContain('@Headers(\'X-Request-ID\') xRequestID: string');
+      expect(result).toContain('@Query(\'version\') version?: number');
+      expect(result).toContain('@Body() body: UpdateItemRequestDto');
+
+      // Should generate abstract method without decorators
+      expect(result).toContain('abstract updateItem(');
+
+      // Should call abstract method with correct parameter order
+      expect(result).toContain('return this.updateItem(itemId, body, xRequestID, version)');
+    });
+
+    it('should handle methods without parameters in override pattern', async () => {
+      const pathsWithoutParams = {
+        '/status': {
+          get: {
+            operationId: 'getStatus',
+            summary: 'Get system status',
+            responses: {
+              '200': {
+                description: 'Status',
+                content: {
+                  'application/json': {
+                    schema: {
+                      $ref: '#/components/schemas/Status'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const result = await controllerGenerator.generateController('status', pathsWithoutParams, testSpec);
+
+      // Should generate decorated method with underscore
+      expect(result).toContain('_getStatus(');
+      expect(result).toContain('@Get(\'/status\')');
+
+      // Should generate abstract method without decorators
+      expect(result).toContain('abstract getStatus(');
+
+      // Should call abstract method without parameters
+      expect(result).toContain('return this.getStatus()');
+    });
+
+    it('should maintain proper return types in both decorated and abstract methods', async () => {
+      const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
+
+      // Both decorated and abstract methods should have same return types
+      expect(result).toContain('_getUsers(');
+      expect(result).toContain('): Promise<any>');
+      expect(result).toContain('abstract getUsers(');
+      expect(result).toContain('): Promise<any>');
+
+      expect(result).toContain('_createUser(');
+      expect(result).toContain('): Promise<UserDto>');
+      expect(result).toContain('abstract createUser(');
+      expect(result).toContain('): Promise<UserDto>');
+
+      expect(result).toContain('_deleteUser(');
+      expect(result).toContain('): Promise<void>');
+      expect(result).toContain('abstract deleteUser(');
+      expect(result).toContain('): Promise<void>');
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle empty paths object', async () => {
       const result = await controllerGenerator.generateController('empty', {}, testSpec);
 
       expect(result).toContain('export abstract class EmptyControllerBase');
-      expect(result).toContain('@Controller()');
       // Should not contain any method definitions
       expect(result.split('@Get').length).toBe(1);
       expect(result.split('@Post').length).toBe(1);

@@ -55,3 +55,4 @@ output/
 # Debug
 debug-*.js
 .kiro
+qodana.yaml

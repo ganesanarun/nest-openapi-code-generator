@@ -88,7 +88,7 @@ describe('DtoGenerator', () => {
       
       // Optional properties should have ?
       expect(result).toContain('age?: number');
-      expect(result).toContain('role?: string');
+      expect(result).toContain('role?: RoleEnum');
       
       // Optional properties should have @IsOptional()
       expect(result).toContain('@IsOptional()');
@@ -134,7 +134,7 @@ describe('DtoGenerator', () => {
       
       // Optional fields should have ?
       expect(result).toContain('age?: number');
-      expect(result).toContain('role?: string');
+      expect(result).toContain('role?: RoleEnum');
       
       // Password validation
       expect(result).toContain('@MinLength(8)');
@@ -253,6 +253,7 @@ describe('DtoGenerator', () => {
 
       // Enum validations
       expect(result).toContain('@IsEnum(StatusEnum)');
+      expect(result).toContain('status?: StatusEnum');
 
       // Array validations
       expect(result).toContain('@IsArray()');

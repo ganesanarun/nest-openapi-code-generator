@@ -83,13 +83,12 @@ describe('GeneratorOrchestrator', () => {
 
       // Check imports
       expect(controllerContent).toContain('import {');
-      expect(controllerContent).toContain('Controller, Get, Post, Put, Patch, Delete');
+      expect(controllerContent).toContain('Get, Post, Put, Patch, Delete');
       expect(controllerContent).toContain('} from \'@nestjs/common\'');
       expect(controllerContent).toContain('import { ApiTags, ApiOperation, ApiResponse');
 
       // Check controller class
       expect(controllerContent).toContain('export abstract class UserControllerBase');
-      expect(controllerContent).toContain('@Controller()');
       expect(controllerContent).toContain('@ApiTags(');
 
       // Check methods
@@ -108,7 +107,7 @@ describe('GeneratorOrchestrator', () => {
       expect(controllerContent).toContain('@Patch(\'/users/{userId}/profile\')');
 
       // Check NotImplementedException
-      expect(controllerContent).toContain('NotImplementedException');
+      expect(controllerContent).not.toContain('NotImplementedException');
     });
 
     it('should handle configuration with DTOs disabled', async () => {

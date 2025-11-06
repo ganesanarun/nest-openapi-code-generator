@@ -50,7 +50,7 @@ describe('Template Customization', () => {
 
       // Should fallback to default template
       expect(result).toContain('export abstract class UserControllerBase');
-      expect(result).toContain('throw new NotImplementedException');
+      expect(result).toContain('return this.');
     });
   });
 

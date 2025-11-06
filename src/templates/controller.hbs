@@ -1,27 +1,32 @@
-import { 
-  Controller, Get, Post, Put, Patch, Delete, 
-  Body, Param, Query, Headers, HttpCode, NotImplementedException 
+import {
+Get, Post, Put, Patch, Delete,
+Body, Param, Query, Headers, HttpCode
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
 {{#if dtoImports}}
 import { {{dtoImports}} } from './{{resourceName}}.dto';
 {{/if}}
 
-@Controller({{#if basePath}}'{{basePath}}'{{/if}})
+
 {{#if tags}}
 @ApiTags({{#each tags}}'{{this}}'{{#unless @last}}, {{/unless}}{{/each}})
 {{/if}}
 export abstract class {{className}}Base {
 {{#each methods}}
 
-  @{{httpMethod}}('{{path}}')
-  {{#each decorators}}
-  {{{this}}}
-  {{/each}}
-  {{methodName}}({{#if allParameters}}{{#each allParameters}}
-    {{{decorator}}} {{name}}: {{type}}{{#unless @last}},{{/unless}}{{/each}}{{/if}}
-  ): Promise<{{returnType}}> {
-    throw new NotImplementedException('{{methodName}} not yet implemented');
-  }
+    @{{httpMethod}}('{{path}}')
+    {{#each decorators}}
+    {{{this}}}
+    {{/each}}
+    _{{methodName}}({{#if allParameters}}{{#each allParameters}}
+        {{{decorator}}} {{name}}: {{type}}{{#unless @last}},{{/unless}}{{/each}}{{/if}}
+    ): Promise<{{returnType}}> {
+        return this.{{methodName}}({{#if abstractParameters}}{{#each abstractParameters}}{{callName}}{{#unless
+            @last}}, {{/unless}}{{/each}}{{/if}});
+    }
+
+    abstract {{methodName}}({{#if abstractParameters}}{{#each abstractParameters}}
+        {{name}}: {{type}}{{#unless @last}},{{/unless}}{{/each}}{{/if}}
+    ): Promise<{{returnType}}>;
 {{/each}}
 }
