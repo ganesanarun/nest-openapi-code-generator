@@ -202,12 +202,12 @@ export class DtoGenerator {
       } 
       
       if (schema.format === 'date') {
+        decorators.push('@IsDate()');
+      }
+
+      if(schema.format === 'date-time') {
         decorators.push('@IsDateString()');
       }
-      
-      if (schema.format === 'date-time') {
-        decorators.push('@IsDateTimeString()');
-      } 
 
       if (schema.enum) {
         const enumName = this.getEnumName(name, schema.enum);

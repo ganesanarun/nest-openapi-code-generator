@@ -41,7 +41,7 @@ describe('DtoGenerator', () => {
       expect(result).toContain('@IsEmail()');
       expect(result).toContain('@IsUUID()');
       expect(result).toContain('@IsDateString()');
-      expect(result).toContain('@IsDateTimeString()');
+      expect(result).toContain('@IsDate()');
       
       // String length validation
       expect(result).toContain('@MinLength(1)');
