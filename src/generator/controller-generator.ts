@@ -46,6 +46,7 @@ interface MethodResponse {
 export class ControllerGenerator {
     private templateLoader: TemplateLoader;
     private readonly includeErrorTypesInReturnType: boolean;
+    private inlineResponseSchemas: Map<string, any> = new Map();
 
     constructor(templateDir?: string, includeErrorTypesInReturnType: boolean = false) {
         this.templateLoader = new TemplateLoader(templateDir);
@@ -134,13 +135,14 @@ export class ControllerGenerator {
         const responses = this.processResponses(operation.responses, operation.operationId, originalSpec);
         const decorators = this.buildDecorators(operation, allParameters, responses);
 
-        // Use the full path for HTTP method decorators
+        // Convert OpenAPI path format to NestJS format and ensure it starts with /
         const fullPath = path.startsWith('/') ? path : '/' + path;
+        const nestJsPath = this.convertPathParametersToNestJsFormat(fullPath);
 
         return {
             httpMethod: this.capitalize(httpMethod),
             methodName,
-            path: fullPath,
+            path: nestJsPath,
             summary: operation.summary,
             tags: operation.tags || [],
             parameters: allParameters, // Keep original for decorators
@@ -274,7 +276,14 @@ export class ControllerGenerator {
     }
 
     private processResponses(responses: any, operationId?: string, originalSpec?: any): MethodResponse[] {
-        return Object.entries(responses).map(([status, response]: [string, any]) => {
+        const responseEntries = Object.entries(responses);
+        const successResponses = responseEntries.filter(([status]) => {
+            const statusCode = parseInt(status);
+            return statusCode >= 200 && statusCode < 300;
+        });
+        const hasMultipleSuccessResponses = successResponses.length > 1;
+
+        return responseEntries.map(([status, response]: [string, any]) => {
             const content = response.content?.['application/json'];
             let type = 'void';
 
@@ -285,7 +294,11 @@ export class ControllerGenerator {
                     originalRef = this.findOriginalSchemaRef(originalSpec, operationId, 'response', status);
                 }
 
-                type = this.getSchemaType(content.schema, originalRef);
+                // Pass status only if we have multiple success responses to avoid naming conflicts
+                const statusCode = parseInt(status);
+                const isSuccessResponse = statusCode >= 200 && statusCode < 300;
+                const statusForNaming = (hasMultipleSuccessResponses && isSuccessResponse) ? status : undefined;
+                type = this.getSchemaType(content.schema, originalRef, operationId, statusForNaming);
 
                 // If it's still 'any', leave it as 'any' - we should only use actual schema names
                 // For error responses without content, we'll leave them as 'void'
@@ -383,7 +396,7 @@ export class ControllerGenerator {
         return type === 'integer' ? 'number' : type;
     }
 
-    private getSchemaType(schema: any, originalRef?: string): string {
+    private getSchemaType(schema: any, originalRef?: string, operationId?: string, status?: string): string {
         // If we have the original reference, use that
         if (originalRef) {
             const refName = originalRef.split('/').pop();
@@ -407,18 +420,66 @@ export class ControllerGenerator {
                     const refName = schema.items.$ref.split('/').pop();
                     return `${refName}Dto[]`;
                 }
-                // For inline array items, we'll still return 'any' for now
+                // Handle arrays of primitive types
+                if (schema.items.type === 'string') {
+                    return 'string[]';
+                }
+                if (schema.items.type === 'number' || schema.items.type === 'integer') {
+                    return 'number[]';
+                }
+                if (schema.items.type === 'boolean') {
+                    return 'boolean[]';
+                }
+                // For inline array items with objects, we'll still return 'any[]' for now
                 return 'any[]';
             }
             return 'any[]';
         }
 
         if (schema.type === 'object' && schema.properties) {
-            // For inline objects, we could generate a type name based on context
+            // Generate contextual DTO name for inline response objects
+            if (operationId) {
+                const dtoName = this.generateInlineResponseDtoName(operationId, status);
+                // Store the inline schema for later DTO generation
+                this.inlineResponseSchemas.set(dtoName, schema);
+                return dtoName;
+            }
+            // Fallback to 'any' if no context available
             return 'any';
         }
 
+        // Handle primitive types
+        if (schema.type === 'string') {
+            return 'string';
+        }
+        if (schema.type === 'number' || schema.type === 'integer') {
+            return 'number';
+        }
+        if (schema.type === 'boolean') {
+            return 'boolean';
+        }
+
         return 'any';
+    }
+
+    private generateInlineResponseDtoName(operationId: string, status?: string): string {
+        // Convert operationId to PascalCase
+        const pascalCaseOperationId = operationId.charAt(0).toUpperCase() + operationId.slice(1);
+
+        // If we have a status code, include it in the name
+        if (status) {
+            return `${pascalCaseOperationId}${status}ResponseDto`;
+        }
+
+        return `${pascalCaseOperationId}ResponseDto`;
+    }
+
+    public getInlineResponseSchemas(): Map<string, any> {
+        return this.inlineResponseSchemas;
+    }
+
+    public clearInlineResponseSchemas(): void {
+        this.inlineResponseSchemas.clear();
     }
 
     private getReturnType(method: ControllerMethod): string {
@@ -500,7 +561,38 @@ export class ControllerGenerator {
             }
         });
 
+        // Extract DTOs referenced within inline response schemas
+        this.inlineResponseSchemas.forEach((schema, dtoName) => {
+            const referencedDtos = this.extractReferencedDtosFromSchema(schema);
+            referencedDtos.forEach(dto => dtos.add(dto));
+        });
+
         return Array.from(dtos);
+    }
+
+    private extractReferencedDtosFromSchema(schema: any): string[] {
+        const dtos: string[] = [];
+
+        if (schema.$ref) {
+            const refName = schema.$ref.split('/').pop();
+            dtos.push(`${refName}Dto`);
+        }
+
+        if (schema.properties) {
+            Object.values(schema.properties).forEach((prop: any) => {
+                dtos.push(...this.extractReferencedDtosFromSchema(prop));
+            });
+        }
+
+        if (schema.items) {
+            dtos.push(...this.extractReferencedDtosFromSchema(schema.items));
+        }
+
+        if (schema.type === 'array' && schema.items) {
+            dtos.push(...this.extractReferencedDtosFromSchema(schema.items));
+        }
+
+        return dtos;
     }
 
     private capitalize(str: string): string {
@@ -533,6 +625,11 @@ export class ControllerGenerator {
             .replace(/^[A-Z]/, (match) => match.toLowerCase());
     }
 
+    // Converts OpenAPI path parameter format {paramName} to NestJS format :paramName
+    private convertPathParametersToNestJsFormat(path: string): string {
+        // Use regex to find all path parameters in {paramName} format and replace with :paramName
+        return path.replace(/\{([^}]+)\}/g, ':$1');
+    }
 
     private findOriginalSchemaRef(originalSpec: any, operationId: string, type: 'requestBody' | 'response', status?: string): string | undefined {
         if (!originalSpec || !originalSpec.paths) return undefined;

@@ -102,9 +102,9 @@ describe('GeneratorOrchestrator', () => {
       // Check decorators
       expect(controllerContent).toContain('@Get(\'/users\')');
       expect(controllerContent).toContain('@Post(\'/users\')');
-      expect(controllerContent).toContain('@Put(\'/users/{userId}\')');
-      expect(controllerContent).toContain('@Delete(\'/users/{userId}\')');
-      expect(controllerContent).toContain('@Patch(\'/users/{userId}/profile\')');
+      expect(controllerContent).toContain('@Put(\'/users/:userId\')');
+      expect(controllerContent).toContain('@Delete(\'/users/:userId\')');
+      expect(controllerContent).toContain('@Patch(\'/users/:userId/profile\')');
 
       // Check NotImplementedException
       expect(controllerContent).not.toContain('NotImplementedException');

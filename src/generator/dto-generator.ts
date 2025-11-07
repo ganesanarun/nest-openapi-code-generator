@@ -70,6 +70,101 @@ export class DtoGenerator {
         });
     }
 
+    async generateDtos(schemas: { [key: string]: any }, inlineSchemas?: Map<string, any>, spec?: OpenAPISpec): Promise<string> {
+        // If no spec provided, create a minimal one
+        if (!spec) {
+            spec = { openapi: '3.1.0', info: { title: 'Generated', version: '1.0.0' }, paths: {} };
+        }
+
+        const template = await this.templateLoader.loadTemplate('dto');
+
+        const allDtos = new Map<string, DtoSchema>();
+        const dependencies = new Map<string, Set<string>>();
+        const nestedDtoSchemas = new Map<string, any>();
+        const allEnums: Array<{ name: string, values: Array<{ key: string, value: string }> }> = [];
+        const enumNames = new Set<string>();
+
+        // Get the original spec with $ref intact if available
+        const originalSpec = (spec as any)._originalSpec;
+        const originalSchemas = originalSpec?.components?.schemas || schemas;
+
+        // First pass: generate all component DTOs
+        for (const [schemaName, schema] of Object.entries(schemas)) {
+            const dtoName = `${schemaName}Dto`;
+
+            // Use original schema with $ref intact if available
+            const originalSchema = originalSchemas[schemaName] || schema;
+            const dtoSchema = this.processSchema(dtoName, originalSchema, spec);
+
+            allDtos.set(dtoName, dtoSchema);
+            dependencies.set(dtoName, new Set(dtoSchema.imports));
+
+            // Collect nested DTO schemas
+            this.collectNestedDtoSchemas(originalSchema, nestedDtoSchemas, spec, dtoName);
+
+            // Collect enums from the resolved schema
+            const schemaEnums = this.collectEnumsForTemplate(schema, spec);
+            schemaEnums.forEach(enumDef => {
+                if (!enumNames.has(enumDef.name)) {
+                    enumNames.add(enumDef.name);
+                    allEnums.push(enumDef);
+                }
+            });
+        }
+
+        // Second pass: generate inline response DTOs
+        if (inlineSchemas) {
+            for (const [dtoName, schema] of inlineSchemas.entries()) {
+                if (!allDtos.has(dtoName)) {
+                    const dtoSchema = this.processSchema(dtoName, schema, spec);
+                    allDtos.set(dtoName, dtoSchema);
+                    dependencies.set(dtoName, new Set(dtoSchema.imports));
+
+                    // Collect nested DTO schemas from inline schemas
+                    this.collectNestedDtoSchemas(schema, nestedDtoSchemas, spec, dtoName);
+
+                    // Collect enums from inline schemas
+                    const inlineEnums = this.collectEnumsForTemplate(schema, spec);
+                    inlineEnums.forEach(enumDef => {
+                        if (!enumNames.has(enumDef.name)) {
+                            enumNames.add(enumDef.name);
+                            allEnums.push(enumDef);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Third pass: generate nested DTOs
+        for (const [nestedDtoName, nestedSchema] of nestedDtoSchemas.entries()) {
+            if (!allDtos.has(nestedDtoName)) {
+                const dtoSchema = this.processSchema(nestedDtoName, nestedSchema, spec);
+                allDtos.set(nestedDtoName, dtoSchema);
+                dependencies.set(nestedDtoName, new Set(dtoSchema.imports));
+
+                // Collect enums from nested schemas
+                const nestedEnums = this.collectEnumsForTemplate(nestedSchema, spec);
+                nestedEnums.forEach(enumDef => {
+                    if (!enumNames.has(enumDef.name)) {
+                        enumNames.add(enumDef.name);
+                        allEnums.push(enumDef);
+                    }
+                });
+            }
+        }
+
+        // Topological sort to resolve dependency order
+        const sorted = this.topologicalSort(dependencies);
+
+        // Return DTOs in dependency order
+        const orderedDtos = sorted.map(dtoName => allDtos.get(dtoName)).filter(Boolean) as DtoSchema[];
+
+        return template({
+            schemas: orderedDtos,
+            enums: allEnums
+        });
+    }
+
     async generateAllDtos(schemas: { [key: string]: any }, spec: OpenAPISpec): Promise<string> {
         const template = await this.templateLoader.loadTemplate('dto');
 
@@ -175,12 +270,17 @@ export class DtoGenerator {
                 type = matchingDtoName;
                 imports.add(matchingDtoName);
             } else {
-                // Create inline DTO type: ParentTypeFieldDto
-                const parentTypeName = currentDtoName?.replace(/Dto$/, '') || 'Unknown';
-                const fieldName = name.charAt(0).toUpperCase() + name.slice(1);
-                const inlineDtoName = `${parentTypeName}${fieldName}Dto`;
-                type = inlineDtoName;
-                imports.add(inlineDtoName);
+                // For inline response DTOs, keep nested inline objects as 'any' to avoid complexity
+                if (currentDtoName && currentDtoName.includes('ResponseDto')) {
+                    type = 'any';
+                } else {
+                    // Create inline DTO type: ParentTypeFieldDto
+                    const parentTypeName = currentDtoName?.replace(/Dto$/, '') || 'Unknown';
+                    const fieldName = name.charAt(0).toUpperCase() + name.slice(1);
+                    const inlineDtoName = `${parentTypeName}${fieldName}Dto`;
+                    type = inlineDtoName;
+                    imports.add(inlineDtoName);
+                }
             }
         }
 
@@ -254,12 +354,17 @@ export class DtoGenerator {
                         itemType = matchingDtoName;
                         imports.add(matchingDtoName);
                     } else {
-                        // Create inline DTO type for array items: ParentTypeFieldItemDto
-                        const parentTypeName = currentDtoName?.replace(/Dto$/, '') || 'Unknown';
-                        const fieldName = name.charAt(0).toUpperCase() + name.slice(1);
-                        const inlineDtoName = `${parentTypeName}${fieldName}ItemDto`;
-                        itemType = inlineDtoName;
-                        imports.add(inlineDtoName);
+                        // For inline response DTOs, keep array items as 'any' to avoid complexity
+                        if (currentDtoName && currentDtoName.includes('ResponseDto')) {
+                            itemType = 'any';
+                        } else {
+                            // Create inline DTO type for array items: ParentTypeFieldItemDto
+                            const parentTypeName = currentDtoName?.replace(/Dto$/, '') || 'Unknown';
+                            const fieldName = name.charAt(0).toUpperCase() + name.slice(1);
+                            const inlineDtoName = `${parentTypeName}${fieldName}ItemDto`;
+                            itemType = inlineDtoName;
+                            imports.add(inlineDtoName);
+                        }
                     }
 
                     // Update the main type to use the correct array type

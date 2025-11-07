@@ -1,32 +1,33 @@
-import { Controller } from '@nestjs/common';
-import { UserControllerBase } from '../generated/user/user.controller.base';
-import { UserService } from './user.service';
-import { UserDto, CreateUserRequestDto, UpdateUserRequestDto } from '../generated/user/user.dto';
+import {Controller} from '@nestjs/common';
+import {UserControllerBase} from '../generated/user/user.controller.base';
+import {UserService} from './user.service';
+import {CreateUserRequestDto, GetUsersResponseDto, UpdateUserRequestDto, UserDto} from "src/generated/user/user.dto";
 
-@Controller('users') // Add @Controller for dependency injection
+@Controller()
 export class UserController extends UserControllerBase {
-  constructor(private readonly userService: UserService) {
-    super();
-  }
 
-  // Clean implementation without decorators - just business logic
-  async getUsers(page?: number, limit?: number): Promise<UserDto[]> {
-    return this.userService.getUsers(page, limit);
-  }
+    constructor(private readonly userService: UserService) {
+        super();
+    }
 
-  async createUser(body: CreateUserRequestDto): Promise<UserDto> {
-    return this.userService.createUser(body);
-  }
+    getUsers(limit?: number, page?: number): Promise<GetUsersResponseDto> {
+        return this.userService.getUsers(page, limit);
+    }
 
-  async getUserById(userId: string): Promise<UserDto> {
-    return this.userService.getUserById(userId);
-  }
+    createUser(body: CreateUserRequestDto): Promise<UserDto> {
+        return this.userService.createUser(body);
+    }
 
-  async updateUser(userId: string, body: UpdateUserRequestDto): Promise<UserDto> {
-    return this.userService.updateUser(userId, body);
-  }
+    getUserById(userId: string): Promise<UserDto> {
+        return this.userService.getUserById(userId);
+    }
 
-  async deleteUser(userId: string): Promise<void> {
-    return this.userService.deleteUser(userId);
-  }
+    updateUser(userId: string, body: UpdateUserRequestDto): Promise<UserDto> {
+        return this.userService.updateUser(userId, body);
+    }
+
+    deleteUser(userId: string): Promise<void> {
+        return this.userService.deleteUser(userId);
+    }
+
 }

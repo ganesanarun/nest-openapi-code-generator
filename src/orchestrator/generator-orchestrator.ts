@@ -60,12 +60,17 @@ export class GeneratorOrchestrator {
 
     const outputDir = path.join(this.config.outputDir, resourceName);
 
-    if (this.config.generateDtos && spec.components?.schemas) {
-      await this.generateDtos(resourceName, spec, outputDir);
-    }
+    // Clear any previous inline response schemas
+    this.controllerGenerator.clearInlineResponseSchemas();
 
+    // Generate controller first to collect inline response schemas
     if (this.config.generateControllers && spec.paths) {
       await this.generateController(resourceName, spec, outputDir);
+    }
+
+    // Generate DTOs including inline response schemas
+    if (this.config.generateDtos && (spec.components?.schemas || this.controllerGenerator.getInlineResponseSchemas().size > 0)) {
+      await this.generateDtos(resourceName, spec, outputDir);
     }
 
     if (this.config.generateServices && spec.paths) {
@@ -79,15 +84,13 @@ export class GeneratorOrchestrator {
     outputDir: string
   ): Promise<void> {
     const schemas = spec.components?.schemas || {};
+    const inlineResponseSchemas = this.controllerGenerator.getInlineResponseSchemas();
     const dtoOutputPath = path.join(outputDir, `${resourceName}.dto.ts`);
 
-    // Generate all DTOs in one file with proper imports and enums
-    const dtoContent = await this.dtoGenerator.generateAllDtos(schemas, spec);
+    // Generate all DTOs including inline response DTOs
+    const dtoContent = await this.dtoGenerator.generateDtos(schemas, inlineResponseSchemas, spec);
     
-    // Add imports at the beginning
-    const fullContent = `${dtoContent}`;
-
-    await this.fileWriter.writeFile(dtoOutputPath, fullContent);
+    await this.fileWriter.writeFile(dtoOutputPath, dtoContent);
   }
 
   private async generateController(
