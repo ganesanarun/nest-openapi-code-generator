@@ -15,6 +15,17 @@ export abstract class UserControllerBase {
 
   // Abstract method (your implementation)
   abstract getUsers(page?: number): Promise<UserDto[]>;
+
+  // Path parameters are automatically converted from OpenAPI {userId} to NestJS :userId
+  @Get('/users/:userId')
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiParam({ name: 'userId', type: String })
+  @ApiResponse({ status: 200, type: UserDto })
+  _getUserById(@Param('userId') userId: string): Promise<UserDto> {
+    return this.getUserById(userId);
+  }
+
+  abstract getUserById(userId: string): Promise<UserDto>;
 }
 ```
 
@@ -33,6 +44,10 @@ export class UserController extends UserControllerBase {
   // Clean implementation (no decorators)
   async getUsers(page?: number): Promise<UserDto[]> {
     return this.userService.findAll({ page });
+  }
+
+  async getUserById(userId: string): Promise<UserDto> {
+    return this.userService.findById(userId);
   }
 }
 ```

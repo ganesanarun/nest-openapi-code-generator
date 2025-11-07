@@ -57,7 +57,8 @@ export abstract class UserControllerBase {
 
     abstract createUser(body: CreateUserRequestDto): Promise<UserDto>;
 
-    @Get('/users/{userId}')
+    // Path parameters are automatically converted from OpenAPI {userId} to NestJS :userId
+    @Get('/users/:userId')
     @ApiOperation({summary: 'Get user by ID'})
     @ApiParam({name: 'userId', type: String})
     @ApiResponse({status: 200, type: UserDto})

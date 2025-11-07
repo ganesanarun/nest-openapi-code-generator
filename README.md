@@ -12,6 +12,7 @@ definitions from OpenAPI 3.1 specifications with built-in validation.
 - 🚀 **Contract-First Development**: Generate NestJS code from OpenAPI specifications
 - 🔍 **OpenAPI 3.1 Support**: Full compatibility with the latest OpenAPI specification
 - 🛡️ **Automatic Validation**: Built-in class-validator decorators for request/response validation
+- 🔄 **Path Parameter Conversion**: Automatic conversion from OpenAPI `{param}` to NestJS `:param` format
 - 📁 **File Watching**: Automatic regeneration when OpenAPI specs change
 - 🎯 **TypeScript First**: Full TypeScript support with comprehensive type definitions
 - 🔧 **Configurable**: Flexible configuration options for different project needs
@@ -448,6 +449,69 @@ src/generated/
     ├── order-management.controller.base.ts
     └── order-management.dto.ts
 ```
+
+## Path Parameter Handling
+
+The generator automatically converts OpenAPI path parameter format to NestJS format:
+
+### Path Parameter Conversion
+
+OpenAPI specifications use curly braces `{paramName}` for path parameters, while NestJS uses colons `:paramName`. The generator handles this conversion automatically:
+
+**OpenAPI Specification:**
+```yaml
+paths:
+  /users/{userId}:
+    get:
+      operationId: getUserById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+```
+
+**Generated Controller:**
+```typescript
+@Get('/users/:userId')  // Automatically converted to NestJS format
+@ApiParam({ name: 'userId', type: String })
+_getUserById(
+    @Param('userId') userId: string
+): Promise<UserDto> {
+    return this.getUserById(userId);
+}
+```
+
+### Multiple Path Parameters
+
+The conversion works seamlessly with multiple path parameters:
+
+**OpenAPI:**
+```yaml
+/users/{userId}/posts/{postId}:
+  get:
+    operationId: getUserPost
+```
+
+**Generated:**
+```typescript
+@Get('/users/:userId/posts/:postId')
+_getUserPost(
+    @Param('userId') userId: string,
+    @Param('postId') postId: string
+): Promise<PostDto> {
+    return this.getUserPost(userId, postId);
+}
+```
+
+### Parameter Name Preservation
+
+The generator preserves exact parameter names including:
+- CamelCase: `{userId}` → `:userId`
+- Underscores: `{user_id}` → `:user_id`
+- Numbers: `{user_id_123}` → `:user_id_123`
+- Mixed formats: `{api_version}` → `:api_version`
 
 ## Advanced Features
 
