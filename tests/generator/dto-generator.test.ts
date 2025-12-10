@@ -229,6 +229,8 @@ describe('DtoGenerator', () => {
                     },
                     tags: {
                         type: 'array',
+                        minItems: 1,
+                        maxItems: 10,
                         items: {type: 'string'}
                     }
                 },
@@ -257,6 +259,8 @@ describe('DtoGenerator', () => {
 
             // Array validations
             expect(result).toContain('@IsArray()');
+            expect(result).toContain('@ArrayMinSize(1)');
+            expect(result).toContain('@ArrayMaxSize(10)');
 
             // Optional validations
             expect(result).toContain('@IsOptional()');

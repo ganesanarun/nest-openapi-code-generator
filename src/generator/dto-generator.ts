@@ -343,7 +343,12 @@ export class DtoGenerator {
             decorators.push('@IsBoolean()');
         } else if (schema.type === 'array') {
             decorators.push('@IsArray()');
-
+            if (schema.minItems !== undefined) {
+                decorators.push(`@ArrayMinSize(${schema.minItems})`);
+            }
+            if (schema.maxItems !== undefined) {
+                decorators.push(`@ArrayMaxSize(${schema.maxItems})`);
+            }
             if (schema.items) {
                 let itemType = this.getTypeScriptType(schema.items, spec, imports, currentDtoName);
 
