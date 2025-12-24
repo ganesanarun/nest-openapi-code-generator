@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 {{#if dtoImports}}
-import { {{dtoImports}} } from '../dtos/{{resourceName}}.dto';
+{ {{dtoImports}} }
 {{/if}}
 
 @ApiTags('{{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}')

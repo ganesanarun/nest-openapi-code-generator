@@ -6,6 +6,9 @@ import {
   ValidateNested, IsInt, IsDate, ArrayMaxSize, ArrayMinSize
 } from 'class-validator';
 import { Type } from 'class-transformer';
+{{#if dtoImports}}
+{{{dtoImports}}}
+{{/if}}
 
 {{#each enums}}
 export enum {{name}} {
@@ -27,7 +30,7 @@ export class {{name}} {
   {{{this}}}
   {{/each}}
   {{name}}: {{type}};
-
+  
 {{/each}}
 }
 

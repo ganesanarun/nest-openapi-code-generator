@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 {{#if dtoImports}}
-import { {{dtoImports}} } from './{{resourceName}}.dto';
+{{{dtoImports}}}
 {{/if}}
 
 @Injectable()

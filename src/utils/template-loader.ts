@@ -66,7 +66,7 @@ export class TemplateLoader {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 {{#if dtoImports}}
-import { {{dtoImports}} } from './{{resourceName}}.dto';
+{{{dtoImports}}}
 {{/if}}
 
 @Controller('{{basePath}}')
@@ -94,7 +94,7 @@ export abstract class {{className}}Base {
     return `import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 {{#if dtoImports}}
-import { {{dtoImports}} } from './{{resourceName}}.dto';
+{{{dtoImports}}}
 {{/if}}
 
 @Injectable()
@@ -124,6 +124,9 @@ import {
   ValidateNested, IsInt
 } from 'class-validator';
 import { Type } from 'class-transformer';
+{{#if dtoImports}}
+{{{dtoImports}}}
+{{/if}}
 
 {{#each enums}}
 export enum {{name}} {

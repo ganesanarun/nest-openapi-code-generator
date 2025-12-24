@@ -18,162 +18,168 @@ describe('DtoGenerator', () => {
 
     describe('generateDto', () => {
         it('should generate DTO class with basic properties', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
-            expect(result).toContain('export class UserDto');
-            expect(result).toContain('import { ApiProperty }');
-            expect(result).toContain('IsString, IsNumber, IsBoolean');
+            expect(result.resourceDtoContent).toContain('export class UserDto');
+            expect(result.resourceDtoContent).toContain('import { ApiProperty }');
+            expect(result.resourceDtoContent).toContain('IsString, IsNumber, IsBoolean');
 
             // Check for required properties
-            expect(result).toContain('id: string');
-            expect(result).toContain('email: string');
-            expect(result).toContain('firstName: string');
-            expect(result).toContain('lastName: string');
+            expect(result.resourceDtoContent).toContain('id: string');
+            expect(result.resourceDtoContent).toContain('email: string');
+            expect(result.resourceDtoContent).toContain('firstName: string');
+            expect(result.resourceDtoContent).toContain('lastName: string');
+            
+        });
+
+        it('should generate shared DTO class with basic properties', async () => {
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
+
+            expect(result.sharedDtoContent).toContain('export class PaginationDto');
+            expect(result.sharedDtoContent).toContain('export class ErrorDto');
+            expect(result.sharedDtoContent).toContain('export class ValidationErrorDto');
+            expect(result.sharedDtoContent).toContain('import { ApiProperty }');
+            expect(result.sharedDtoContent).toContain('IsString, IsNumber, IsBoolean');
+
+            // Check for required properties
+            expect(result.sharedDtoContent).toContain('page: number');
+            expect(result.sharedDtoContent).toContain('limit: number');
+            expect(result.sharedDtoContent).toContain('total: number');
+            expect(result.sharedDtoContent).toContain('totalPages: number');
         });
 
         it('should generate proper validation decorators for string properties', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Email validation
-            expect(result).toContain('@IsString()');
-            expect(result).toContain('@IsEmail()');
-            expect(result).toContain('@IsUUID()');
-            expect(result).toContain('@IsDateString()');
-            expect(result).toContain('@IsDate()');
+            expect(result.resourceDtoContent).toContain('@IsString()');
+            expect(result.resourceDtoContent).toContain('@IsEmail()');
+            expect(result.resourceDtoContent).toContain('@IsUUID()');
+            expect(result.resourceDtoContent).toContain('@IsDateString()');
+            expect(result.resourceDtoContent).toContain('@IsDate()');
 
             // String length validation
-            expect(result).toContain('@MinLength(1)');
-            expect(result).toContain('@MaxLength(50)');
-            expect(result).toContain('@MaxLength(255)');
+            expect(result.resourceDtoContent).toContain('@MinLength(1)');
+            expect(result.resourceDtoContent).toContain('@MaxLength(50)');
+            expect(result.resourceDtoContent).toContain('@MaxLength(255)');
         });
 
         it('should generate proper validation decorators for numeric properties', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Age validation
-            expect(result).toContain('@IsInt()');
-            expect(result).toContain('@Min(13)');
-            expect(result).toContain('@Max(120)');
+            expect(result.resourceDtoContent).toContain('@IsInt()');
+            expect(result.resourceDtoContent).toContain('@Min(13)');
+            expect(result.resourceDtoContent).toContain('@Max(120)');
         });
 
         it('should generate enum validation decorators', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Status enum
-            expect(result).toContain('@IsEnum(StatusEnum)');
+            expect(result.resourceDtoContent).toContain('@IsEnum(StatusEnum)');
             // Role enum
-            expect(result).toContain('@IsEnum(RoleEnum)');
+            expect(result.resourceDtoContent).toContain('@IsEnum(RoleEnum)');
         });
 
         it('should generate array validation decorators', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Tags array
-            expect(result).toContain('@IsArray()');
-            expect(result).toContain('tags?: string[]');
+            expect(result.resourceDtoContent).toContain('@IsArray()');
+            expect(result.resourceDtoContent).toContain('tags?: string[]');
         });
 
         it('should handle optional properties correctly', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Required properties should not have ?
-            expect(result).toContain('id: string');
-            expect(result).toContain('email: string');
+            expect(result.resourceDtoContent).toContain('id: string');
+            expect(result.resourceDtoContent).toContain('email: string');
 
             // Optional properties should have ?
-            expect(result).toContain('age?: number');
-            expect(result).toContain('role?: RoleEnum');
+            expect(result.resourceDtoContent).toContain('age?: number');
+            expect(result.resourceDtoContent).toContain('role?: RoleEnum');
 
             // Optional properties should have @IsOptional()
-            expect(result).toContain('@IsOptional()');
+            expect(result.resourceDtoContent).toContain('@IsOptional()');
         });
 
         it('should generate ApiProperty decorators with proper options', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Check for ApiProperty with description
-            expect(result).toContain("description: 'Unique identifier for the user'");
-            expect(result).toContain("description: 'User\\'s email address'");
+            expect(result.resourceDtoContent).toContain("description: 'Unique identifier for the user'");
+            expect(result.resourceDtoContent).toContain("description: 'User\\'s email address'");
 
             // Check for examples
-            expect(result).toContain('example: "123e4567-e89b-12d3-a456-426614174000"');
-            expect(result).toContain('example: "john.doe@example.com"');
+            expect(result.resourceDtoContent).toContain('example: "123e4567-e89b-12d3-a456-426614174000"');
+            expect(result.resourceDtoContent).toContain('example: "john.doe@example.com"');
 
             // Check for enum options
-            // expect(result).toContain("enum: ['active', 'inactive', 'pending']");
-            // expect(result).toContain("enum: ['admin', 'user', 'moderator']");
+            // expect(result.resourceDtoContent).toContain("enum: ['active', 'inactive', 'pending']");
+            // expect(result.resourceDtoContent).toContain("enum: ['admin', 'user', 'moderator']");
         });
 
         it('should handle nested object references', async () => {
-            const userSchema = testSpec.components?.schemas?.User as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
             // Should reference proper DTO types now that we resolve refs
-            expect(result).toContain('profile?: UserProfileDto');
-            expect(result).toContain('preferences?: UserPreferencesDto');
+            expect(result.resourceDtoContent).toContain('profile?: UserProfileDto');
+            expect(result.resourceDtoContent).toContain('preferences?: UserPreferencesDto');
         });
 
         it('should generate DTO for CreateUserRequest schema', async () => {
-            const createUserSchema = testSpec.components?.schemas?.CreateUserRequest as SchemaObject;
-            const result = await dtoGenerator.generateDto('CreateUserRequestDto', createUserSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
-            expect(result).toContain('export class CreateUserRequestDto');
+            expect(result.resourceDtoContent).toContain('export class CreateUserRequestDto');
 
             // Required fields should not have ?
-            expect(result).toContain('email: string');
-            expect(result).toContain('firstName: string');
-            expect(result).toContain('lastName: string');
-            expect(result).toContain('password: string');
+            expect(result.resourceDtoContent).toContain('email: string');
+            expect(result.resourceDtoContent).toContain('firstName: string');
+            expect(result.resourceDtoContent).toContain('lastName: string');
+            expect(result.resourceDtoContent).toContain('password: string');
 
             // Optional fields should have ?
-            expect(result).toContain('age?: number');
-            expect(result).toContain('role?: RoleEnum');
+            expect(result.resourceDtoContent).toContain('age?: number');
+            expect(result.resourceDtoContent).toContain('role?: RoleEnum');
 
             // Password validation
-            expect(result).toContain('@MinLength(8)');
-            expect(result).toContain('@MaxLength(128)');
-            expect(result).toContain('@Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]/)');
+            expect(result.resourceDtoContent).toContain('@MinLength(8)');
+            expect(result.resourceDtoContent).toContain('@MaxLength(128)');
+            expect(result.resourceDtoContent).toContain('@Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]/)');
         });
 
         it('should generate DTO for UserProfile schema with pattern validation', async () => {
-            const profileSchema = testSpec.components?.schemas?.UserProfile as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserProfileDto', profileSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
-            expect(result).toContain('export class UserProfileDto');
+            expect(result.resourceDtoContent).toContain('export class UserProfileDto');
 
             // Phone number pattern validation
-            expect(result).toContain('@Matches(/^\\+?[1-9]\\d{1,14}$/)');
+            expect(result.resourceDtoContent).toContain('@Matches(/^\\+?[1-9]\\d{1,14}$/)');
 
             // URI format validation
-            expect(result).toContain('avatar?: string');
-            expect(result).toContain('website?: string');
+            expect(result.resourceDtoContent).toContain('avatar?: string');
+            expect(result.resourceDtoContent).toContain('website?: string');
 
             // All properties should be optional in profile
-            expect(result).toContain('bio?: string');
-            expect(result).toContain('location?: string');
+            expect(result.resourceDtoContent).toContain('bio?: string');
+            expect(result.resourceDtoContent).toContain('location?: string');
         });
 
         it('should handle complex nested structures', async () => {
-            const preferencesSchema = testSpec.components?.schemas?.UserPreferences as SchemaObject;
-            const result = await dtoGenerator.generateDto('UserPreferencesDto', preferencesSchema, testSpec);
+            const result = await dtoGenerator.generateAllDtosSplit(testSpec);
 
-            expect(result).toContain('export class UserPreferencesDto');
+            expect(result.resourceDtoContent).toContain('export class UserPreferencesDto');
 
             // Should handle nested object properties
-            expect(result).toContain('notifications?: UserPreferencesNotificationsDto');
+            expect(result.resourceDtoContent).toContain('notifications?: UserPreferencesNotificationsDto');
 
             // Should handle pattern validation for language
-            expect(result).toContain('@Matches(/^[a-z]{2}(-[A-Z]{2})?$/)');
+            expect(result.resourceDtoContent).toContain('@Matches(/^[a-z]{2}(-[A-Z]{2})?$/)');
 
             // Should handle enum for theme
-            expect(result).toContain("enum: ['light', 'dark', 'auto']");
+            expect(result.resourceDtoContent).toContain("enum: ['light', 'dark', 'auto']");
         });
     });
 

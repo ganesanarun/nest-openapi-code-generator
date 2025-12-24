@@ -1,5 +1,6 @@
 import {OpenAPISpec, Operation, PathItem} from '../types/openapi';
 import {TemplateLoader} from '../utils/template-loader';
+import {DtoImporter} from '../utils/dto-importer';
 
 interface ControllerMethod {
     httpMethod: string;
@@ -46,11 +47,13 @@ interface MethodResponse {
 export class ControllerGenerator {
     private templateLoader: TemplateLoader;
     private readonly includeErrorTypesInReturnType: boolean;
+    private readonly isDtoGenerationEnabled: boolean;
     private inlineResponseSchemas: Map<string, any> = new Map();
 
-    constructor(templateDir?: string, includeErrorTypesInReturnType: boolean = false) {
+    constructor(templateDir?: string, includeErrorTypesInReturnType: boolean = false, isDtoGenerationEnabled: boolean = true) {
         this.templateLoader = new TemplateLoader(templateDir);
         this.includeErrorTypesInReturnType = includeErrorTypesInReturnType;
+        this.isDtoGenerationEnabled = isDtoGenerationEnabled;
     }
 
     async generateController(
@@ -62,7 +65,7 @@ export class ControllerGenerator {
         const tags = this.extractTags(methods);
 
         const template = await this.templateLoader.loadTemplate('controller');
-        const dtoImports = this.extractDtoImports(methods);
+        const { localDtos, sharedDtosUsed } = this.extractDtoImports(methods, spec);
 
         return template({
             className: this.generateClassName(resourceName) + 'Controller',
@@ -73,7 +76,7 @@ export class ControllerGenerator {
                 returnType: this.getReturnType(m),
                 hasParams: (m.allParameters && m.allParameters.length > 0) || m.parameters.length > 0 || !!m.bodyParam
             })),
-            dtoImports: dtoImports.join(', ')
+            dtoImports: this.isDtoGenerationEnabled ? DtoImporter.generateImportStatements(localDtos, sharedDtosUsed, resourceName): undefined,
         });
     }
 
@@ -525,7 +528,11 @@ export class ControllerGenerator {
         return Array.from(tags);
     }
 
-    private extractDtoImports(methods: ControllerMethod[]): string[] {
+    private extractDtoImports(methods: ControllerMethod[], spec: OpenAPISpec): { localDtos: string[], sharedDtosUsed: string[] } {
+        if (!this.isDtoGenerationEnabled) {
+            return { localDtos: [], sharedDtosUsed: [] };
+        }
+        
         const dtos = new Set<string>();
         methods.forEach(m => {
             if (m.bodyParam) {
@@ -567,7 +574,7 @@ export class ControllerGenerator {
             referencedDtos.forEach(dto => dtos.add(dto));
         });
 
-        return Array.from(dtos);
+        return DtoImporter.resolveDtoImports(dtos, spec);
     }
 
     private extractReferencedDtosFromSchema(schema: any): string[] {

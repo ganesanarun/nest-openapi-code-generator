@@ -104,6 +104,14 @@ describe('Template Customization', () => {
         testSpecPath
       );
 
+      // Create a folder for ref schemas and copy schemas folder there
+      const specsSchemasDir = path.join(tempDir, 'schemas');
+      await fs.ensureDir(specsSchemasDir);
+      await fs.copy(
+        path.join(__dirname, '../fixtures/schemas'),
+        specsSchemasDir
+      );
+
       // Update config to use temp directory
       config.specsDir = tempDir;
       const testOrchestrator = new GeneratorOrchestrator(config);

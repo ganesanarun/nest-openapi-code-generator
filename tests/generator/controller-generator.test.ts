@@ -169,8 +169,13 @@ describe('ControllerGenerator', () => {
             expect(result).toContain('ProfileUpdateRequestDto');
             expect(result).toContain('UserDto');
             expect(result).toContain('UserProfileDto');
-            expect(result).toContain('ValidationErrorDto');
-            expect(result).toContain('ErrorDto');
+        });
+
+        it('should generate shared DTO imports based on used schemas', async () => {
+            const result = await controllerGenerator.generateController('user', testSpec.paths, testSpec);
+
+            // Should import shared DTOs based on actual OpenAPI x-shared: true vendor extension
+            expect(result).toContain('import { ErrorDto, ValidationErrorDto, PaginationDto } from \'../shared/shared.dto\'');
         });
     });
 
@@ -920,7 +925,8 @@ describe('ControllerGenerator', () => {
             const result = await controllerGenerator.generateController('transaction', pathsWithMultipleRefs, testSpec);
 
             // Should import all referenced DTOs
-            expect(result).toContain(' TransactionDto, TransactionRequestDto, ValidationErrorDto');
+            expect(result).toContain('import { TransactionDto, TransactionRequestDto } from \'./transaction.dto\'');
+            expect(result).toContain('import { ValidationErrorDto } from \'../shared/shared.dto\'');
             expect(result).toContain('@Body() body: TransactionRequestDto');
             expect(result).toContain('): Promise<TransactionDto>');
             expect(result).toContain('): Promise<TransactionDto[]>');

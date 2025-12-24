@@ -38,9 +38,17 @@ describe('GeneratorOrchestrator', () => {
       const userDir = path.join(tempDir, 'user');
       expect(await fs.pathExists(userDir)).toBe(true);
 
+      // Check that shared directory was created
+      const sharedDir = path.join(tempDir, 'shared');
+      expect(await fs.pathExists(sharedDir)).toBe(true);
+
       // Check that DTO file was generated
       const dtoFile = path.join(userDir, 'user.dto.ts');
       expect(await fs.pathExists(dtoFile)).toBe(true);
+
+      // Check that shared DTO file was generated
+      const sharedDtoFile = path.join(sharedDir, 'shared.dto.ts');
+      expect(await fs.pathExists(sharedDtoFile)).toBe(true);
 
       // Check that controller file was generated
       const controllerFile = path.join(userDir, 'user.controller.base.ts');
@@ -55,6 +63,7 @@ describe('GeneratorOrchestrator', () => {
 
       // Check imports
       expect(dtoContent).toContain('import { ApiProperty } from \'@nestjs/swagger\'');
+      expect(dtoContent).toContain('import { PaginationDto } from \'../shared/shared.dto\'');
       expect(dtoContent).toContain('import {');
       expect(dtoContent).toContain('IsString, IsNumber, IsBoolean, IsArray, IsOptional');
       expect(dtoContent).toContain('} from \'class-validator\'');
@@ -75,6 +84,32 @@ describe('GeneratorOrchestrator', () => {
       expect(dtoContent).toContain('@ApiProperty(');
     });
 
+    it('should generate shared DTOs with proper content', async () => {
+      await orchestrator.generate();
+
+      const sharedDtoFile = path.join(tempDir, 'shared', 'shared.dto.ts');
+      const sharedDtoContent = await fs.readFile(sharedDtoFile, 'utf-8');
+
+      // Check imports
+      expect(sharedDtoContent).toContain('import { ApiProperty } from \'@nestjs/swagger\'');
+      expect(sharedDtoContent).toContain('import {');
+      expect(sharedDtoContent).toContain('IsString, IsNumber, IsBoolean, IsArray, IsOptional');
+      expect(sharedDtoContent).toContain('} from \'class-validator\'');
+
+      // Check DTO classes
+      expect(sharedDtoContent).toContain('export class PaginationDto');
+      expect(sharedDtoContent).toContain('export class ErrorDto');
+      expect(sharedDtoContent).toContain('export class ValidationErrorDto');
+
+      // Check properties and validations
+      expect(sharedDtoContent).toContain('@IsString()');
+      expect(sharedDtoContent).toContain('@IsArray()');
+      expect(sharedDtoContent).toContain('@IsInt()');
+      expect(sharedDtoContent).toContain('@Min(');
+      expect(sharedDtoContent).toContain('@Max(');
+      expect(sharedDtoContent).toContain('@ApiProperty(');
+    });
+
     it('should generate controllers with proper content', async () => {
       await orchestrator.generate();
 
@@ -86,6 +121,8 @@ describe('GeneratorOrchestrator', () => {
       expect(controllerContent).toContain('Get, Post, Put, Patch, Delete');
       expect(controllerContent).toContain('} from \'@nestjs/common\'');
       expect(controllerContent).toContain('import { ApiTags, ApiOperation, ApiResponse');
+      expect(controllerContent).toContain('import { GetUsersResponseDto, CreateUserRequestDto, UserDto, UpdateUserRequestDto, ProfileUpdateRequestDto, UserProfileDto } from \'./user.dto\';');
+      expect(controllerContent).toContain('import { ErrorDto, ValidationErrorDto, PaginationDto } from \'../shared/shared.dto\'');
 
       // Check controller class
       expect(controllerContent).toContain('export abstract class UserControllerBase');
@@ -123,9 +160,18 @@ describe('GeneratorOrchestrator', () => {
       const dtoFile = path.join(userDir, 'user.dto.ts');
       expect(await fs.pathExists(dtoFile)).toBe(false);
 
+      // Shared folder (with shared DTOs) should not be generated
+      const sharedDir = path.join(tempDir, 'shared');
+      expect(await fs.pathExists(sharedDir)).toBe(false);
+
       // Controller file should still be generated
       const controllerFile = path.join(userDir, 'user.controller.base.ts');
       expect(await fs.pathExists(controllerFile)).toBe(true);
+
+      // Controller should not have DTO imports
+      const controllerContent = await fs.readFile(controllerFile, 'utf-8');
+      expect(controllerContent).not.toContain('import { GetUsersResponseDto, CreateUserRequestDto, UserDto, UpdateUserRequestDto, ProfileUpdateRequestDto, UserProfileDto } from \'./user.dto\'');
+      expect(controllerContent).not.toContain('import { ErrorDto, ValidationErrorDto } from \'../shared/shared.dto\'');
     });
 
     it('should handle configuration with controllers disabled', async () => {
@@ -140,6 +186,11 @@ describe('GeneratorOrchestrator', () => {
       // DTO file should be generated
       const dtoFile = path.join(userDir, 'user.dto.ts');
       expect(await fs.pathExists(dtoFile)).toBe(true);
+
+      // Shared DTO file should be generated
+      const sharedDir = path.join(tempDir, 'shared');
+      const sharedDtoFile = path.join(sharedDir, 'shared.dto.ts');
+      expect(await fs.pathExists(sharedDtoFile)).toBe(true);
 
       // Controller file should not be generated
       const controllerFile = path.join(userDir, 'user.controller.base.ts');

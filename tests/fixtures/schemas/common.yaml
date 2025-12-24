@@ -1,0 +1,91 @@
+components:
+  schemas:
+    Error:
+      x-shared: true
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "USER_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The requested user could not be found"
+        details:
+          type: string
+          description: Additional error details
+          example: "User with ID 123e4567-e89b-12d3-a456-426614174000 does not exist"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2023-01-15T10:30:00Z"
+
+    ValidationError:
+      x-shared: true
+      type: object
+      required:
+        - code
+        - message
+        - errors
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Request validation failed"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field that failed validation
+                example: "email"
+              message:
+                type: string
+                description: Validation error message
+                example: "Invalid email format"
+              code:
+                type: string
+                description: Specific validation error code
+                example: "INVALID_FORMAT"
+
+    Pagination:
+      x-shared: true
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of items per page
+          example: 10
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 15

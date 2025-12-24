@@ -1,5 +1,6 @@
 import { OpenAPISpec, PathItem, Operation } from '../types/openapi';
 import { TemplateLoader } from '../utils/template-loader';
+import { DtoImporter } from '../utils/dto-importer';
 
 interface ServiceMethod {
   httpMethod: string;
@@ -23,9 +24,11 @@ interface BodyParameter {
 
 export class ServiceGenerator {
   private templateLoader: TemplateLoader;
+  private readonly isDtoGenerationEnabled: boolean;
 
-  constructor(templateDir?: string) {
+  constructor(templateDir?: string, isDtoGenerationEnabled: boolean = true) {
     this.templateLoader = new TemplateLoader(templateDir);
+    this.isDtoGenerationEnabled = isDtoGenerationEnabled;
   }
 
   async generateService(
@@ -36,7 +39,7 @@ export class ServiceGenerator {
     const methods = this.extractMethods(paths, spec, resourceName);
 
     const template = await this.templateLoader.loadTemplate('service');
-    const dtoImports = this.extractDtoImports(methods);
+    const { localDtos, sharedDtosUsed } = this.extractDtoImports(methods, spec);
 
     return template({
       className: this.generateClassName(resourceName),
@@ -45,7 +48,7 @@ export class ServiceGenerator {
         ...m,
         hasParams: m.parameters.length > 0 || !!m.bodyParam
       })),
-      dtoImports: dtoImports.join(', ')
+      dtoImports: this.isDtoGenerationEnabled ? DtoImporter.generateImportStatements(localDtos, sharedDtosUsed, resourceName) : undefined
     });
   }
 
@@ -201,7 +204,11 @@ export class ServiceGenerator {
     return `${httpMethod}${this.capitalize(resource)}`;
   }
 
-  private extractDtoImports(methods: ServiceMethod[]): string[] {
+  private extractDtoImports(methods: ServiceMethod[], spec: OpenAPISpec): { localDtos: string[], sharedDtosUsed: string[] } {
+    if (!this.isDtoGenerationEnabled) {
+        return { localDtos: [], sharedDtosUsed: [] };
+    }
+
     const dtos = new Set<string>();
     methods.forEach(m => {
       if (m.bodyParam) {
@@ -211,7 +218,7 @@ export class ServiceGenerator {
         dtos.add(m.returnType);
       }
     });
-    return Array.from(dtos);
+    return DtoImporter.resolveDtoImports(dtos, spec);
   }
 
   private capitalize(str: string): string {
