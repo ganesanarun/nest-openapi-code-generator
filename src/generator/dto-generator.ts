@@ -714,10 +714,16 @@ export class DtoGenerator {
 
                     if (!enumNames.has(enumName)) {
                         enumNames.add(enumName);
-                        const enumValues = prop.enum.map((value: string) => ({
-                            key: value.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
-                            value: value
-                        }));
+                        const enumValues = prop.enum.map((value: string) => {
+                            const key = value.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+                            // Check if the key starts with a number or is a reserved word
+                            const needsQuotes = /^\d/.test(key);
+                            return {
+                                key,
+                                value,
+                                needsQuotes
+                            };
+                        });
 
                         enums.push({
                             name: enumName,

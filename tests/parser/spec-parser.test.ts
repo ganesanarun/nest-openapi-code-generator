@@ -1,4 +1,4 @@
-import { SpecParser } from '../../src/parser/spec-parser';
+import { SpecParser } from '../../src';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

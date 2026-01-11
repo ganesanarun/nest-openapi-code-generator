@@ -1,6 +1,6 @@
-import {DtoGenerator} from '../../src/generator/dto-generator';
-import {SpecParser} from '../../src/parser/spec-parser';
-import {OpenAPISpec, SchemaObject} from '../../src/types/openapi';
+import {DtoGenerator} from '../../src';
+import {SpecParser} from '../../src';
+import {OpenAPISpec, SchemaObject} from '../../src';
 import * as path from 'path';
 
 describe('DtoGenerator', () => {
@@ -82,11 +82,11 @@ describe('DtoGenerator', () => {
             const userSchema = testSpec.components?.schemas?.User as SchemaObject;
             const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
 
-            // Required properties should not have ?
+            // Required properties should not have?
             expect(result).toContain('id: string');
             expect(result).toContain('email: string');
 
-            // Optional properties should have ?
+            // Optional properties should have?
             expect(result).toContain('age?: number');
             expect(result).toContain('role?: RoleEnum');
 
@@ -126,13 +126,13 @@ describe('DtoGenerator', () => {
 
             expect(result).toContain('export class CreateUserRequestDto');
 
-            // Required fields should not have ?
+            // Required fields should not have?
             expect(result).toContain('email: string');
             expect(result).toContain('firstName: string');
             expect(result).toContain('lastName: string');
             expect(result).toContain('password: string');
 
-            // Optional fields should have ?
+            // Optional fields should have?
             expect(result).toContain('age?: number');
             expect(result).toContain('role?: RoleEnum');
 
@@ -325,11 +325,11 @@ describe('DtoGenerator', () => {
             const userProfileSchema = complexSpec.components?.schemas?.UserProfile as SchemaObject;
             const result = await dtoGenerator.generateDto('UserProfileDto', userProfileSchema, complexSpec);
 
-            // Required properties should not have ?
+            // Required properties should not have?
             expect(result).toContain('firstName: string');
             expect(result).toContain('lastName: string');
 
-            // Optional properties should have ?
+            // Optional properties should have?
             expect(result).toContain('avatar?: string');
             expect(result).toContain('address?: AddressDto');
             expect(result).toContain('socialLinks?: SocialLinkDto[]');
@@ -342,7 +342,7 @@ describe('DtoGenerator', () => {
             const milestoneSchema = complexSpec.components?.schemas?.Milestone as SchemaObject;
             const result = await dtoGenerator.generateDto('MilestoneDto', milestoneSchema, complexSpec);
 
-            // Should handle self-referencing dependencies array by using 'any' to avoid circular reference
+            // Should handle a self-referencing dependencies array by using 'any' to avoid circular reference
             expect(result).toContain('dependencies?: any[]');
             expect(result).toContain('@ValidateNested({ each: true })');
             expect(result).toContain('@Type(() => Object)');
@@ -372,6 +372,9 @@ describe('DtoGenerator', () => {
             expect(result).toContain('export enum CountryEnum');
             expect(result).toContain('US = \'US\'');
             expect(result).toContain('CA = \'CA\'');
+            expect(result).toContain('\'99_OTHERS\' = \'99 others\'');
+            expect(result).toContain('\'100M\' = \'100M\'');
+            expect(result).toContain('@ApiProperty({ enum: [\'US\', \'CA\', \'UK\', \'DE\', \'FR\', \'JP\', \'AU\', \'99 others\', \'100M\'] })')
             expect(result).toContain('@IsEnum(CountryEnum)');
         });
 
@@ -421,7 +424,7 @@ describe('DtoGenerator', () => {
             const userSchema = testSpec.components?.schemas?.User as SchemaObject;
             const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
 
-            // Should handle metadata object with additionalProperties
+            // Should handle a metadata object with additionalProperties
             expect(result).toContain('metadata?: object');
         });
 

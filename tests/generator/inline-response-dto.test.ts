@@ -1,4 +1,4 @@
-import {ControllerGenerator} from '../../src/generator/controller-generator';
+import {ControllerGenerator} from '../../src';
 import {DtoGenerator} from '../../src';
 import {SpecParser} from '../../src';
 import {OpenAPISpec} from '../../src';

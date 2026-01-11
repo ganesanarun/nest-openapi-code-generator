@@ -126,7 +126,7 @@ components:
           pattern: '^[0-9]{5}(-[0-9]{4})?$'
         country:
           type: string
-          enum: [US, CA, UK, DE, FR, JP, AU]
+          enum: [US, CA, UK, DE, FR, JP, AU, '99 others', '100M']
 
     SocialLink:
       type: object

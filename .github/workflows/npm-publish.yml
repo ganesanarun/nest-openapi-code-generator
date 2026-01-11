@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 20
-      - run: rm -rf node_modules && yarn install --frozen-lockfile
+      - run: rm -rf node_modules && yarn install --immutable
       - run: yarn build
       - run: yarn test
 
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
-      - run: rm -rf node_modules && yarn install --frozen-lockfile
+      - run: rm -rf node_modules && yarn install --immutable
       - run: yarn publish --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}

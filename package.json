@@ -1,6 +1,6 @@
 {
   "name": "@snow-tzu/nest-openapi-code-generator",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Contract-first OpenAPI code generator for NestJS with validation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

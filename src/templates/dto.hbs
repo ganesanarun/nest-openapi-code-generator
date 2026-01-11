@@ -10,7 +10,7 @@ import { Type } from 'class-transformer';
 {{#each enums}}
 export enum {{name}} {
 {{#each values}}
-  {{key}} = '{{value}}'{{#unless @last}},{{/unless}}
+  {{#if needsQuotes}}'{{key}}'{{else}}{{key}}{{/if}} = '{{value}}'{{#unless @last}},{{/unless}}
 {{/each}}
 }
 
