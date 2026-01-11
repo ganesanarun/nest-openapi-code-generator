@@ -1,6 +1,6 @@
 import { ServiceGenerator } from '../../src/generator/service-generator';
-import { SpecParser } from '../../src/parser/spec-parser';
-import { OpenAPISpec } from '../../src/types/openapi';
+import { SpecParser } from '../../src';
+import { OpenAPISpec } from '../../src';
 import * as path from 'path';
 
 describe('ServiceGenerator', () => {

@@ -1,9 +1,9 @@
-import { ControllerGenerator } from '../../src/generator/controller-generator';
+import { ControllerGenerator } from '../../src';
 import { ServiceGenerator } from '../../src/generator/service-generator';
-import { SpecParser } from '../../src/parser/spec-parser';
-import { GeneratorOrchestrator } from '../../src/orchestrator/generator-orchestrator';
-import { OpenAPISpec } from '../../src/types/openapi';
-import { GeneratorConfig } from '../../src/types/config';
+import { SpecParser } from '../../src';
+import { GeneratorOrchestrator } from '../../src';
+import { OpenAPISpec } from '../../src';
+import { GeneratorConfig } from '../../src';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 

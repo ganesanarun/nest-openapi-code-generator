@@ -1,5 +1,5 @@
-import { GeneratorOrchestrator } from '../../src/orchestrator/generator-orchestrator';
-import { GeneratorConfig } from '../../src/types/config';
+import { GeneratorOrchestrator } from '../../src';
+import { GeneratorConfig } from '../../src';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
