@@ -121,7 +121,7 @@ export class {{className}}Service {
 import { 
   IsString, IsNumber, IsBoolean, IsArray, IsOptional, 
   IsEmail, IsEnum, Min, Max, MinLength, MaxLength, Matches,
-  ValidateNested, IsInt
+  ValidateNested, IsInt, IsObject
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
