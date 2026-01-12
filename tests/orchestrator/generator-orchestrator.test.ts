@@ -57,6 +57,7 @@ describe('GeneratorOrchestrator', () => {
       expect(dtoContent).toContain('import { ApiProperty } from \'@nestjs/swagger\'');
       expect(dtoContent).toContain('import {');
       expect(dtoContent).toContain('IsString, IsNumber, IsBoolean, IsArray, IsOptional');
+      expect(dtoContent).toContain('IsObject');
       expect(dtoContent).toContain('} from \'class-validator\'');
 
       // Check DTO classes
