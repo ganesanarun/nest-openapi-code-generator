@@ -201,6 +201,22 @@ describe('DtoGenerator', () => {
             expect(result).toContain('arrayProp?: string[]');
             expect(result).toContain('objectProp?: object');
         });
+
+        it('should add @IsObject decorator for object type without properties', async () => {
+            const testSchema: SchemaObject = {
+                type: 'object',
+                properties: {
+                    genericObject: {
+                        type: 'object',
+                        description: 'A generic object property'
+                    }
+                }
+            };
+
+            const result = await dtoGenerator.generateDto('ObjectTestDto', testSchema, testSpec);
+            expect(result).toContain('@IsObject()');
+            expect(result).toContain('genericObject?: object;');
+        });
     });
 
     describe('validation decorator generation', () => {

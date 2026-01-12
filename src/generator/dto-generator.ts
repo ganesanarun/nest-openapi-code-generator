@@ -341,6 +341,8 @@ export class DtoGenerator {
             }
         } else if (schema.type === 'boolean') {
             decorators.push('@IsBoolean()');
+        } else if (schema.type === 'object' && !schema.properties) {
+            decorators.push('@IsObject()');
         } else if (schema.type === 'array') {
             decorators.push('@IsArray()');
             if (schema.minItems !== undefined) {
