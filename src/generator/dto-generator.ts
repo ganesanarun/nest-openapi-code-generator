@@ -385,6 +385,10 @@ export class DtoGenerator {
                 }
             }
         } else if (schema.$ref) {
+            const resolvedSchema = this.resolveSchemaReference(schema.$ref, spec);
+            if (resolvedSchema?.type === 'object') {
+                decorators.push('@IsObject()');
+            }
             decorators.push('@ValidateNested()');
             const typeReference = type !== 'any' ? type : 'Object';
             decorators.push(`@Type(() => ${typeReference})`);
