@@ -383,6 +383,12 @@ export class DtoGenerator {
                     const typeReference = (schema.items.$ref && itemType !== 'any') || itemType.endsWith('Dto') ? itemType : 'Object';
                     decorators.push(`@Type(() => ${typeReference})`);
                 }
+
+                if (schema.items.type === 'string' && schema.items.enum) {
+                    const enumName = this.getEnumName(name, schema.items.enum);
+                    decorators.push(`@IsEnum(${enumName}, { each: true })`);
+                    type = `${enumName}[]`;
+                }
             }
         } else if (schema.$ref) {
             const resolvedSchema = this.resolveSchemaReference(schema.$ref, spec);
@@ -425,9 +431,14 @@ export class DtoGenerator {
         if (schema.type === 'array') {
             apiPropertyOptions.push('isArray: true');
             if (schema.items) {
-                const itemType = this.getTypeScriptType(schema.items, spec, imports, currentDtoName);
-                const apiPropertyType = this.getApiPropertyType(itemType);
-                apiPropertyOptions.push(`type: () => ${apiPropertyType}`);
+                if (schema.items.type === 'string' && schema.items.enum) {
+                    const enumName = this.getEnumName(name, schema.items.enum);
+                    apiPropertyOptions.push(`enum: ${enumName}`);
+                } else {
+                    const itemType = this.getTypeScriptType(schema.items, spec, imports, currentDtoName);
+                    const apiPropertyType = this.getApiPropertyType(itemType);
+                    apiPropertyOptions.push(`type: () => ${apiPropertyType}`);
+                }
             }
         }
 
@@ -477,7 +488,7 @@ export class DtoGenerator {
                 return 'boolean';
             case 'array':
                 if (schema.items) {
-                    let itemType = this.getTypeScriptType(schema.items, spec, imports, currentDtoName);
+                    let itemType = this.getTypeScriptType(schema.items, spec, imports, currentDtoName, propertyName);
 
                     // Check if array items match an existing DTO
                     if (schema.items.type === 'object' && schema.items.properties && !schema.items.$ref && imports && spec) {
@@ -503,7 +514,7 @@ export class DtoGenerator {
     }
 
 
-    private getEnumName(propertyName: string, enumValues: string[]): string {
+    private getEnumName(propertyName: string, _enumValues: string[]): string {
         // Create enum name based on property name
         const baseName = propertyName.charAt(0).toUpperCase() + propertyName.slice(1);
         return `${baseName}Enum`;
@@ -757,6 +768,19 @@ export class DtoGenerator {
                             enums.push(arrayEnum);
                         }
                     });
+                }
+
+                if (prop.type === 'array' && prop.items && prop.items.type === 'string' && prop.items.enum) {
+                    const enumName = this.getEnumName(propName, prop.items.enum);
+                    if (!enumNames.has(enumName)) {
+                        enumNames.add(enumName);
+                        const enumValues = prop.items.enum.map((value: string) => {
+                            const key = value.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+                            const needsQuotes = /^\d/.test(key);
+                            return { key, value, needsQuotes };
+                        });
+                        enums.push({ name: enumName, values: enumValues });
+                    }
                 }
             }
         }

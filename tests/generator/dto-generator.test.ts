@@ -78,6 +78,28 @@ describe('DtoGenerator', () => {
             expect(result).toContain('tags?: string[]');
         });
 
+        it('should generate correct schema for enum arrays', async () => {
+            const schema = {
+                type: 'object',
+                required: ['shippingMethods'],
+                properties: {
+                    shippingMethods: {
+                    type: 'array',
+                    items: {
+                        type: 'string',
+                        enum: ['SAME_DAY', 'NEXT_DAY', 'SCHEDULED', 'DATE_RANGE'],
+                    },
+                    },
+                },
+            };
+            const result = await dtoGenerator.generateDto('OrderDto', schema, testSpec);
+            expect(result).toContain('export enum ShippingMethodsEnum');
+            expect(result).toContain("SAME_DAY = 'SAME_DAY'");
+            expect(result).toContain('@IsEnum(ShippingMethodsEnum, { each: true })');
+            expect(result).toContain('@ApiProperty({ isArray: true, enum: ShippingMethodsEnum })');
+            expect(result).toContain('shippingMethods: ShippingMethodsEnum[]');
+        });
+
         it('should handle optional properties correctly', async () => {
             const userSchema = testSpec.components?.schemas?.User as SchemaObject;
             const result = await dtoGenerator.generateDto('UserDto', userSchema, testSpec);
